@@ -19,7 +19,7 @@ const (
 	// Service name.
 	name                    = "azure-cnimonitor"
 	pluginName              = "azure-vnet"
-	DEFAULT_TIMEOUT_IN_SECS = "120"
+	DEFAULT_TIMEOUT_IN_SECS = "60"
 )
 
 // Version is populated by make during build.
@@ -125,13 +125,13 @@ func main() {
 		return
 	}
 
-	nm, err := network.NewNetworkManager()
-	if err != nil {
-		log.Printf("Failed while creating network manager")
-		return
-	}
-
 	for true {
+		nm, err := network.NewNetworkManager()
+		if err != nil {
+			log.Printf("Failed while creating network manager")
+			return
+		}
+
 		if err := nm.Initialize(&config); err != nil {
 			log.Printf("Failed while initializing network manager %+v", err)
 		}
