@@ -143,6 +143,7 @@ func main() {
 			return
 		}
 
+		log.Printf("Going to sleep for %v seconds", timeout)
 		time.Sleep(time.Duration(timeout) * time.Second)
 	}
 
