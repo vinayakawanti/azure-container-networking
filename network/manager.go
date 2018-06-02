@@ -4,6 +4,7 @@
 package network
 
 import (
+	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -19,6 +20,11 @@ const (
 	// Network store key.
 	storeKey = "Network"
 )
+
+type NetworkMonitor struct {
+	AddRulesToBeValidated    map[string]int
+	DeleteRulesToBeValidated map[string]int
+}
 
 // NetworkManager manages the set of container networking resources.
 type networkManager struct {
@@ -45,7 +51,7 @@ type NetworkManager interface {
 	GetEndpointInfo(networkId string, endpointId string) (*EndpointInfo, error)
 	AttachEndpoint(networkId string, endpointId string, sandboxKey string) (*endpoint, error)
 	DetachEndpoint(networkId string, endpointId string) error
-	SetupNetworkUsingState() error
+	SetupNetworkUsingState(networkMonitor *NetworkMonitor) error
 }
 
 // Creates a new network manager.
@@ -363,69 +369,140 @@ func (nm *networkManager) DetachEndpoint(networkId string, endpointId string) er
 	return nil
 }
 
-func (nm *networkManager) SetupNetworkUsingState() error {
-	nm.createRequiredL2Rules()
-	return nil
-}
+func (nm *networkManager) SetupNetworkUsingState(networkMonitor *NetworkMonitor) error {
+	var currentEbtableRulesMap map[string]string
+	var currentStateRulesMap map[string]string
 
-func (nm *networkManager) createRequiredL2Rules() {
-
-	if nm.ExternalInterfaces == nil {
-		log.Printf("[Azure-CNIMonitor] Nothing to add")
-		return
-	}
-
-	preRulesList, err := common.ExecuteShellCommand("ebtables -t nat -L PREROUTING --Lmac2")
+	preRules, err := common.ExecuteShellCommand("ebtables -t nat -L PREROUTING --Lmac2")
 	if err != nil {
 		log.Printf("Error while getting prerules list")
 	}
 
-	ruleSplit := strings.Split(preRulesList, "\n")
-	log.Printf("PreRouting rule count : %v", len(ruleSplit)-4)
+	preRulesList := strings.Split(preRules, "\n")
+	log.Printf("PreRouting rule count : %v", len(preRulesList)-4)
 
-	postRulesList, err := common.ExecuteShellCommand("ebtables -t nat -L POSTROUTING --Lmac2")
+	currentEbtableRulesMap = make(map[string]string)
+	for _, rule := range preRulesList {
+		rule = strings.TrimSpace(rule)
+		if rule != "" && !strings.Contains(rule, "Bridge table") && !strings.Contains(rule, "Bridge chain") {
+			currentEbtableRulesMap[rule] = ebtables.PreRouting
+		}
+	}
+
+	postRules, err := common.ExecuteShellCommand("ebtables -t nat -L POSTROUTING --Lmac2")
 	if err != nil {
 		log.Printf("Error while getting postrules list")
 	}
 
-	ruleSplit = strings.Split(postRulesList, "\n")
-	log.Printf("PostRouting rule count : %v", len(ruleSplit)-4)
+	postRulesList := strings.Split(postRules, "\n")
+	log.Printf("PostRouting rule count : %v", len(postRulesList)-4)
+
+	for _, rule := range postRulesList {
+		rule = strings.TrimSpace(rule)
+		if rule != "" && !strings.Contains(rule, "Bridge table") && !strings.Contains(rule, "Bridge chain") {
+			currentEbtableRulesMap[rule] = ebtables.PostRouting
+		}
+	}
+
+	currentStateRulesMap = nm.AddStateRulesToMap()
+
+	nm.createRequiredL2Rules(currentEbtableRulesMap, currentStateRulesMap, networkMonitor)
+	nm.removeInvalidL2Rules(currentEbtableRulesMap, currentStateRulesMap, networkMonitor)
+	return nil
+}
+
+func (nm *networkManager) AddStateRulesToMap() map[string]string {
+	rulesMap := make(map[string]string)
 
 	for _, extIf := range nm.ExternalInterfaces {
-		if !ebtables.CheckIfDnatForArpReplyRuleExists(preRulesList, extIf.Name) {
-			log.Printf("[Azure-CNIMonitor] Adding DNAT rule for ingress ARP traffic on interface %v.", extIf.Name)
-			if err := ebtables.SetDnatForArpReplies(extIf.Name, ebtables.Append); err != nil {
-				log.Printf("[Azure-CNIMonitor] SetDnatForArpReplies ebtable rule failed with %+v", err)
-			}
-		}
+		arpDnatKey := fmt.Sprintf("-p ARP -i %s --arp-op Reply -j dnat --to-dst ff:ff:ff:ff:ff:ff --dnat-target ACCEPT", extIf.Name)
+		rulesMap[arpDnatKey] = ebtables.PreRouting
 
-		if !ebtables.CheckIfSnatRuleExists(postRulesList, extIf.Name, extIf.MacAddress) {
-			log.Printf("[Azure-CNIMonitor] Adding SNAT rule for egress traffic on interface %v and mac %v", extIf.Name, extIf.MacAddress.String())
-			if err := ebtables.SetSnatForInterface(extIf.Name, extIf.MacAddress, ebtables.Append); err != nil {
-				log.Printf("[Azure-CNIMonitor] SetSnatForInterface ebtable rule failed with %+v", err)
-			}
-		}
+		snatKey := fmt.Sprintf("-s Unicast -o %s -j snat --to-src %s --snat-arp --snat-target ACCEPT", extIf.Name, extIf.MacAddress.String())
+		rulesMap[snatKey] = ebtables.PostRouting
 
 		for _, nw := range extIf.Networks {
 			for _, ep := range nw.Endpoints {
 				for _, ipAddr := range ep.IPAddresses {
-					// Add ARP reply rule.
-					if !ebtables.CheckIfArpReplyRuleExists(preRulesList, ipAddr.IP, ep.MacAddress) {
-						log.Printf("[Azure-CNIMonitor] Adding ARP reply rule for IP address %v on %v.", ipAddr.String(), ep.MacAddress.String())
-						if err := ebtables.SetArpReply(ipAddr.IP, ep.MacAddress, ebtables.Append); err != nil {
-							log.Printf("[Azure-CNIMonitor] SetArpReply ebtable rule failed with %+v", err)
-						}
-					}
+					arpReplyKey := fmt.Sprintf("-p ARP --arp-op Request --arp-ip-dst %s -j arpreply --arpreply-mac %s", ipAddr.IP.String(), ep.MacAddress.String())
+					rulesMap[arpReplyKey] = ebtables.PreRouting
 
-					if !ebtables.CheckIfDnatForIPRuleExists(preRulesList, nw.extIf.Name, ipAddr.IP, ep.MacAddress) {
-						// Add MAC address translation rule.
-						log.Printf("[Azure-CNIMonitor] Adding MAC DNAT rule for IP address %v on %v.", ipAddr.String(), ep.MacAddress.String())
-						if err := ebtables.SetDnatForIPAddress(nw.extIf.Name, ipAddr.IP, ep.MacAddress, ebtables.Append); err != nil {
-							log.Printf("[Azure-CNIMonitor] SetDnatForIPAddress ebtable rule failed with %+v", err)
-						}
-					}
+					dnatMacKey := fmt.Sprintf("-p IPv4 -i %s --ip-dst %s -j dnat --to-dst %s --dnat-target ACCEPT", extIf.Name, ipAddr.IP.String(), ep.MacAddress.String())
+					rulesMap[dnatMacKey] = ebtables.PreRouting
 				}
 			}
 		}
 	}
+
+	return rulesMap
+}
+
+func DeleteRulesNotExistInMap(networkMonitor *NetworkMonitor, chainRules map[string]string, stateRules map[string]string) {
+	for rule, chain := range chainRules {
+		if _, ok := stateRules[rule]; !ok {
+			if itr, ok := networkMonitor.DeleteRulesToBeValidated[rule]; ok && itr > 0 {
+				log.Printf("Deleting Ebtable rule as it didn't exist in state for %d iterations chain %v rule %v", itr, chain, rule)
+				if err := ebtables.DeleteEbtableRule(chain, rule); err != nil {
+					log.Printf("Error while deleting ebtable rule %v", err)
+				}
+			} else {
+				log.Printf("[DELETE] Found unmatched rule chain %v rule %v itr %d. Giving one more iteration", chain, rule, itr)
+				networkMonitor.DeleteRulesToBeValidated[rule] = itr + 1
+			}
+		}
+	}
+}
+
+func (nm *networkManager) removeInvalidL2Rules(
+	currentEbtableRulesMap map[string]string,
+	currentStateRulesMap map[string]string,
+	networkMonitor *NetworkMonitor) error {
+
+	if nm.ExternalInterfaces == nil {
+		return fmt.Errorf("[Azure-CNIMonitor] Nothing to delete")
+	}
+
+	for rule := range networkMonitor.DeleteRulesToBeValidated {
+		if _, ok := currentEbtableRulesMap[rule]; !ok {
+			delete(networkMonitor.DeleteRulesToBeValidated, rule)
+		}
+	}
+
+	DeleteRulesNotExistInMap(networkMonitor, currentEbtableRulesMap, currentStateRulesMap)
+	return nil
+}
+
+func AddRulesNotExistInMap(networkMonitor *NetworkMonitor, stateRules map[string]string, chainRules map[string]string) {
+	for rule, chain := range stateRules {
+		if _, ok := chainRules[rule]; !ok {
+			if itr, ok := networkMonitor.AddRulesToBeValidated[rule]; ok && itr > 0 {
+				log.Printf("Adding Ebtable rule as it didn't exist in state for %d iterations chain %v rule %v", itr, chain, rule)
+				if err := ebtables.AddEbtableRule(chain, rule); err != nil {
+					log.Printf("Error while deleting ebtable rule %v", err)
+				}
+			} else {
+				log.Printf("[ADD] Found unmatched rule chain %v rule %v itr %d. Giving one more iteration", chain, rule, itr)
+				networkMonitor.AddRulesToBeValidated[rule] = itr + 1
+			}
+		}
+	}
+}
+
+func (nm *networkManager) createRequiredL2Rules(
+	currentEbtableRulesMap map[string]string,
+	currentStateRulesMap map[string]string,
+	networkMonitor *NetworkMonitor) error {
+
+	if nm.ExternalInterfaces == nil {
+		return fmt.Errorf("[Azure-CNIMonitor] Nothing to add")
+	}
+
+	for rule := range networkMonitor.AddRulesToBeValidated {
+		if _, ok := currentStateRulesMap[rule]; !ok {
+			delete(networkMonitor.AddRulesToBeValidated, rule)
+		}
+	}
+
+	AddRulesNotExistInMap(networkMonitor, currentStateRulesMap, currentEbtableRulesMap)
+	return nil
 }

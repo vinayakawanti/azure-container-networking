@@ -19,6 +19,11 @@ const (
 	Delete = "-D"
 )
 
+const (
+	PreRouting  = "PREROUTING"
+	PostRouting = "POSTROUTING"
+)
+
 // InstallEbtables installs the ebtables package.
 func installEbtables() {
 	version, _ := ioutil.ReadFile("/proc/version")
@@ -142,4 +147,22 @@ func CheckIfDnatForIPRuleExists(rulesList string, interfaceName string, ipAddres
 		}
 	}
 	return false
+}
+
+func DeleteEbtableRule(chain string, rule string) error {
+	if rule == "" {
+		return fmt.Errorf("Rule is empty")
+	}
+
+	command := fmt.Sprintf("ebtables -t nat -D %s %s", chain, rule)
+	return executeShellCommand(command)
+}
+
+func AddEbtableRule(chain string, rule string) error {
+	if rule == "" {
+		return fmt.Errorf("Rule is empty")
+	}
+
+	command := fmt.Sprintf("ebtables -t nat -A %s %s", chain, rule)
+	return executeShellCommand(command)
 }
