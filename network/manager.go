@@ -445,6 +445,8 @@ func DeleteRulesNotExistInMap(networkMonitor *NetworkMonitor, chainRules map[str
 				if err := ebtables.DeleteEbtableRule(chain, rule); err != nil {
 					log.Printf("Error while deleting ebtable rule %v", err)
 				}
+
+				delete(networkMonitor.DeleteRulesToBeValidated, rule)
 			} else {
 				log.Printf("[DELETE] Found unmatched rule chain %v rule %v itr %d. Giving one more iteration", chain, rule, itr)
 				networkMonitor.DeleteRulesToBeValidated[rule] = itr + 1
@@ -480,6 +482,8 @@ func AddRulesNotExistInMap(networkMonitor *NetworkMonitor, stateRules map[string
 				if err := ebtables.AddEbtableRule(chain, rule); err != nil {
 					log.Printf("Error while deleting ebtable rule %v", err)
 				}
+
+				delete(networkMonitor.AddRulesToBeValidated, rule)
 			} else {
 				log.Printf("[ADD] Found unmatched rule chain %v rule %v itr %d. Giving one more iteration", chain, rule, itr)
 				networkMonitor.AddRulesToBeValidated[rule] = itr + 1
