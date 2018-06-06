@@ -119,18 +119,18 @@ func main() {
 	// Log platform information.
 	log.Printf("Running on %v", platform.GetOSInfo())
 
-	config.Store, err = store.NewJsonFileStore(platform.CNIRuntimePath + pluginName + ".json")
-	if err != nil {
-		fmt.Printf("Failed to create store: %v\n", err)
-		return
-	}
-
 	netMonitor := &network.NetworkMonitor{
 		AddRulesToBeValidated:    make(map[string]int),
 		DeleteRulesToBeValidated: make(map[string]int),
 	}
 
 	for true {
+		config.Store, err = store.NewJsonFileStore(platform.CNIRuntimePath + pluginName + ".json")
+		if err != nil {
+			fmt.Printf("Failed to create store: %v\n", err)
+			return
+		}
+
 		nm, err := network.NewNetworkManager()
 		if err != nil {
 			log.Printf("Failed while creating network manager")
@@ -150,6 +150,7 @@ func main() {
 
 		log.Printf("Going to sleep for %v seconds", timeout)
 		time.Sleep(time.Duration(timeout) * time.Second)
+		nm = nil
 	}
 
 	log.Close()
