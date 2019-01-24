@@ -14,6 +14,7 @@ import (
 	"github.com/Azure/azure-container-networking/log"
 	"github.com/Azure/azure-container-networking/platform"
 	"github.com/Azure/azure-container-networking/store"
+	"github.com/Azure/azure-container-networking/telemetry"
 )
 
 const (
@@ -24,6 +25,7 @@ const (
 type NetworkMonitor struct {
 	AddRulesToBeValidated    map[string]int
 	DeleteRulesToBeValidated map[string]int
+	CNIReport                *telemetry.CNIReport
 }
 
 // NetworkManager manages the set of container networking resources.
@@ -441,11 +443,12 @@ func DeleteRulesNotExistInMap(networkMonitor *NetworkMonitor, chainRules map[str
 	for rule, chain := range chainRules {
 		if _, ok := stateRules[rule]; !ok {
 			if itr, ok := networkMonitor.DeleteRulesToBeValidated[rule]; ok && itr > 0 {
-				log.Printf("Deleting Ebtable rule as it didn't exist in state for %d iterations chain %v rule %v", itr, chain, rule)
+				buf := fmt.Sprintf("Deleting Ebtable rule as it didn't exist in state for %d iterations chain %v rule %v", itr, chain, rule)
 				if err := ebtables.DeleteEbtableRule(chain, rule); err != nil {
-					log.Printf("Error while deleting ebtable rule %v", err)
+					buf = fmt.Sprintf("Error while deleting ebtable rule %v", err)
 				}
-
+				log.Printf(buf)
+				networkMonitor.CNIReport.ErrorMessage = buf
 				delete(networkMonitor.DeleteRulesToBeValidated, rule)
 			} else {
 				log.Printf("[DELETE] Found unmatched rule chain %v rule %v itr %d. Giving one more iteration", chain, rule, itr)
@@ -478,11 +481,12 @@ func AddRulesNotExistInMap(networkMonitor *NetworkMonitor, stateRules map[string
 	for rule, chain := range stateRules {
 		if _, ok := chainRules[rule]; !ok {
 			if itr, ok := networkMonitor.AddRulesToBeValidated[rule]; ok && itr > 0 {
-				log.Printf("Adding Ebtable rule as it didn't exist in state for %d iterations chain %v rule %v", itr, chain, rule)
+				buf := fmt.Sprintf("Adding Ebtable rule as it didn't exist in state for %d iterations chain %v rule %v", itr, chain, rule)
 				if err := ebtables.AddEbtableRule(chain, rule); err != nil {
-					log.Printf("Error while deleting ebtable rule %v", err)
+					buf = fmt.Sprintf("Error while adding ebtable rule chain %v rule %v err %v", chain, rule, err)
 				}
-
+				log.Printf(buf)
+				networkMonitor.CNIReport.ErrorMessage = buf
 				delete(networkMonitor.AddRulesToBeValidated, rule)
 			} else {
 				log.Printf("[ADD] Found unmatched rule chain %v rule %v itr %d. Giving one more iteration", chain, rule, itr)

@@ -16,7 +16,6 @@ import (
 )
 
 var reportManager *ReportManager
-var report *Report
 var ipamQueryUrl = "localhost:3501"
 var hostAgentUrl = "localhost:3500"
 
@@ -35,8 +34,7 @@ var ipamQueryResponse = "" +
 	"</Interfaces>"
 
 func TestMain(m *testing.M) {
-
-	u, _ := url.Parse("tcp://" + "localhost:3501")
+	u, _ := url.Parse("tcp://" + ipamQueryUrl)
 	ipamAgent, err := common.NewListener(u)
 	if err != nil {
 		fmt.Printf("Failed to create agent, err:%v.\n", err)
@@ -68,10 +66,8 @@ func TestMain(m *testing.M) {
 
 	reportManager = &ReportManager{}
 	reportManager.HostNetAgentURL = "http://" + hostAgentUrl
-	reportManager.IpamQueryURL = "http://" + ipamQueryUrl
-	reportManager.ReportType = "application/json"
-	reportManager.Report = &Report{}
-	report = reportManager.Report
+	reportManager.ContentType = "application/json"
+	reportManager.Report = &CNIReport{}
 	exitCode := m.Run()
 	os.Exit(exitCode)
 }
@@ -83,7 +79,7 @@ func handleIpamQuery(w http.ResponseWriter, r *http.Request) {
 
 func handleCNIReport(rw http.ResponseWriter, req *http.Request) {
 	decoder := json.NewDecoder(req.Body)
-	var t Report
+	var t CNIReport
 	err := decoder.Decode(&t)
 	if err != nil {
 		panic(err)
@@ -99,27 +95,26 @@ func handleCNIReport(rw http.ResponseWriter, req *http.Request) {
 }
 
 func TestGetOSDetails(t *testing.T) {
-	report.GetOSDetails()
-	if report.ErrorMessage != "" {
-		t.Errorf("GetOSDetails failed due to %v", report.ErrorMessage)
+	reportManager.Report.(*CNIReport).GetOSDetails()
+	if reportManager.Report.(*CNIReport).ErrorMessage != "" {
+		t.Errorf("GetOSDetails failed due to %v", reportManager.Report.(*CNIReport).ErrorMessage)
 	}
 }
 func TestGetSystemDetails(t *testing.T) {
-
-	report.GetSystemDetails()
-	if report.ErrorMessage != "" {
-		t.Errorf("GetSystemDetails failed due to %v", report.ErrorMessage)
+	reportManager.Report.(*CNIReport).GetSystemDetails()
+	if reportManager.Report.(*CNIReport).ErrorMessage != "" {
+		t.Errorf("GetSystemDetails failed due to %v", reportManager.Report.(*CNIReport).ErrorMessage)
 	}
 }
 func TestGetInterfaceDetails(t *testing.T) {
-	report.GetSystemDetails()
-	if report.ErrorMessage != "" {
-		t.Errorf("GetInterfaceDetails failed due to %v", report.ErrorMessage)
+	reportManager.Report.(*CNIReport).GetSystemDetails()
+	if reportManager.Report.(*CNIReport).ErrorMessage != "" {
+		t.Errorf("GetInterfaceDetails failed due to %v", reportManager.Report.(*CNIReport).ErrorMessage)
 	}
 }
 
 func TestGetReportState(t *testing.T) {
-	state := report.GetReportState()
+	state := reportManager.GetReportState(CNITelemetryFile)
 	if state != false {
 		t.Errorf("Wrong state in getreport state")
 	}
@@ -133,12 +128,12 @@ func TestSendTelemetry(t *testing.T) {
 }
 
 func TestSetReportState(t *testing.T) {
-	err := report.SetReportState()
+	err := reportManager.SetReportState(CNITelemetryFile)
 	if err != nil {
 		t.Errorf("SetReportState failed due to %v", err)
 	}
 
-	err = os.Remove(TelemetryFile)
+	err = os.Remove(CNITelemetryFile)
 	if err != nil {
 		t.Errorf("Error removing telemetry file due to %v", err)
 	}

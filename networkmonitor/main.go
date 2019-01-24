@@ -13,11 +13,12 @@ import (
 	"github.com/Azure/azure-container-networking/network"
 	"github.com/Azure/azure-container-networking/platform"
 	"github.com/Azure/azure-container-networking/store"
+	"github.com/Azure/azure-container-networking/telemetry"
 )
 
 const (
 	// Service name.
-	name                    = "azure-cnimonitor"
+	name                    = "azure-testcnimonitor"
 	pluginName              = "azure-vnet"
 	DEFAULT_TIMEOUT_IN_SECS = "10"
 )
@@ -119,9 +120,45 @@ func main() {
 	// Log platform information.
 	log.Printf("Running on %v", platform.GetOSInfo())
 
+	reportManager := &telemetry.ReportManager{
+		ContentType: telemetry.ContentType,
+		Report: &telemetry.CNIReport{
+			Context:          "AzureCNINetworkMonitor",
+			SystemDetails:    telemetry.SystemInfo{},
+			InterfaceDetails: telemetry.InterfaceInfo{},
+			BridgeDetails:    telemetry.BridgeInfo{},
+		},
+	}
+
 	netMonitor := &network.NetworkMonitor{
 		AddRulesToBeValidated:    make(map[string]int),
 		DeleteRulesToBeValidated: make(map[string]int),
+		CNIReport:                reportManager.Report.(*telemetry.CNIReport),
+	}
+
+CONNECT:
+	tb := telemetry.NewTelemetryBuffer()
+	attempt := 0
+	for attempt < 3 {
+		if err := tb.StartServer(); err != nil {
+			if !tb.FdExists {
+				time.Sleep(1 * time.Second)
+				attempt++
+				continue
+			}
+		}
+
+		err = tb.Connect()
+		if err != nil {
+			log.Printf("Connection to telemetry socket failed: %v", err)
+			tb.Cleanup(telemetry.FdName)
+			tb.FdExists = false
+		} else {
+			tb.Connected = true
+			log.Printf("Connected to telemetry service")
+			go tb.BufferAndPushData(0)
+			break
+		}
 	}
 
 	for true {
@@ -146,6 +183,19 @@ func main() {
 		if err := nm.SetupNetworkUsingState(netMonitor); err != nil {
 			log.Printf("Failed while SetupNetworkUsingState")
 			return
+		}
+
+		if netMonitor.CNIReport.ErrorMessage != "" {
+			log.Printf("Report discrepancy in rules")
+			report, err := reportManager.ReportToBytes()
+			if err == nil {
+				// If write fails, try to re-establish connections as server/client
+				if _, err = tb.Write(report); err != nil {
+					tb.Cancel()
+					goto CONNECT
+				}
+				netMonitor.CNIReport.ErrorMessage = ""
+			}
 		}
 
 		log.Printf("Going to sleep for %v seconds", timeout)

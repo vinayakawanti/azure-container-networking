@@ -6,6 +6,7 @@ package telemetry
 import (
 	"fmt"
 	"os/exec"
+	"reflect"
 	"runtime"
 	"strings"
 	"syscall"
@@ -60,7 +61,7 @@ func getDiskInfo(path string) (*DiskInfo, error) {
 }
 
 // This function  creates a report with system details(memory, disk, cpu).
-func (report *Report) GetSystemDetails() {
+func (report *CNIReport) GetSystemDetails() {
 	var errMsg string
 	var cpuCount int = 0
 
@@ -76,7 +77,7 @@ func (report *Report) GetSystemDetails() {
 		errMsg = errMsg + err.Error()
 	}
 
-	report.SystemDetails = &SystemInfo{
+	report.SystemDetails = SystemInfo{
 		MemVMTotal:   memInfo.MemTotal,
 		MemVMFree:    memInfo.MemFree,
 		DiskVMTotal:  diskInfo.DiskTotal,
@@ -87,19 +88,26 @@ func (report *Report) GetSystemDetails() {
 }
 
 // This function  creates a report with os details(ostype, version).
-func (report *Report) GetOSDetails() {
-	linesArr, err := ReadFileByLines("/etc/issue")
+func (report *CNIReport) GetOSDetails() {
+	linesArr, err := ReadFileByLines("/etc/os-release")
 	if err != nil || len(linesArr) <= 0 {
-		report.OSDetails = &OSInfo{OSType: runtime.GOOS}
-		report.OSDetails.ErrorMessage = "reading /etc/issue failed with" + err.Error()
+		report.OSDetails = OSInfo{OSType: runtime.GOOS}
+		report.OSDetails.ErrorMessage = "reading /etc/os-release failed with" + err.Error()
 		return
 	}
 
-	osInfoArr := strings.Split(linesArr[0], " ")
+	osInfoArr := make(map[string]string)
+
+	for i := range linesArr {
+		s := strings.Split(linesArr[i], "=")
+		if len(s) == 2 {
+			osInfoArr[s[0]] = strings.TrimSuffix(s[1], "\n")
+		}
+	}
 
 	out, err := exec.Command("uname", "-r").Output()
 	if err != nil {
-		report.OSDetails = &OSInfo{OSType: runtime.GOOS}
+		report.OSDetails = OSInfo{OSType: runtime.GOOS}
 		report.OSDetails.ErrorMessage = "uname -r failed with " + err.Error()
 		return
 	}
@@ -107,10 +115,21 @@ func (report *Report) GetOSDetails() {
 	kernelVersion := string(out)
 	kernelVersion = strings.TrimSuffix(kernelVersion, "\n")
 
-	report.OSDetails = &OSInfo{
+	report.OSDetails = OSInfo{
 		OSType:         runtime.GOOS,
-		OSVersion:      osInfoArr[1],
+		OSVersion:      osInfoArr["VERSION"],
 		KernelVersion:  kernelVersion,
-		OSDistribution: osInfoArr[0],
+		OSDistribution: osInfoArr["ID"],
+	}
+}
+
+// Get kernel version
+func (reportMgr *ReportManager) GetKernelVersion() {
+	out, err := exec.Command("uname", "-r").Output()
+	if err == nil {
+		v := reflect.ValueOf(reportMgr.Report).Elem().FieldByName("Metadata")
+		if v.CanSet() {
+			v.FieldByName("KernelVersion").SetString(strings.TrimSuffix(string(out), "\n"))
+		}
 	}
 }

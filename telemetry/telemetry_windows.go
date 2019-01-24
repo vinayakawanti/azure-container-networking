@@ -25,11 +25,16 @@ func getDiskInfo(path string) (*DiskInfo, error) {
 	return nil, nil
 }
 
-func (report *Report) GetSystemDetails() {
+func (report *CNIReport) GetSystemDetails() {
 
-	report.SystemDetails = &SystemInfo{}
+	report.SystemDetails = SystemInfo{}
 }
 
-func (report *Report) GetOSDetails() {
-	report.OSDetails = &OSInfo{OSType: runtime.GOOS}
+func (report *CNIReport) GetOSDetails() {
+	report.OSDetails = OSInfo{OSType: runtime.GOOS}
+}
+
+// Get kernel version
+func (reportMgr *ReportManager) GetKernelVersion() {
+	// stub
 }
