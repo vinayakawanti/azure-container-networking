@@ -187,6 +187,8 @@ CONNECT:
 
 		if netMonitor.CNIReport.ErrorMessage != "" {
 			log.Printf("Report discrepancy in rules")
+			t := time.Now()
+			netMonitor.CNIReport.Timestamp = t.Format("2006-01-02 15:04:05")
 			report, err := reportManager.ReportToBytes()
 			if err == nil {
 				// If write fails, try to re-establish connections as server/client
