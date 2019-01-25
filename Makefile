@@ -38,7 +38,7 @@ CNSFILES = \
 	$(COREFILES) \
 	$(CNMFILES)
 
-NETMONFILES = \
+CNMSFILES = \
 	$(wildcard networkmonitor/*.go) \
 	$(COREFILES)
 
@@ -51,7 +51,7 @@ CNM_DIR = cnm/plugin
 CNI_NET_DIR = cni/network/plugin
 CNI_IPAM_DIR = cni/ipam/plugin
 CNS_DIR = cns/service
-NETMON_DIR = networkmonitor
+CNMS_DIR = networkmonitor
 OUTPUT_DIR = output
 BUILD_DIR = $(OUTPUT_DIR)/$(GOOS)_$(GOARCH)
 CNM_BUILD_DIR = $(BUILD_DIR)/cnm
@@ -80,6 +80,7 @@ endif
 CNM_ARCHIVE_NAME = azure-vnet-cnm-$(GOOS)-$(GOARCH)-$(VERSION).$(ARCHIVE_EXT)
 CNI_ARCHIVE_NAME = azure-vnet-cni-$(GOOS)-$(GOARCH)-$(VERSION).$(ARCHIVE_EXT)
 CNS_ARCHIVE_NAME = azure-cns-$(GOOS)-$(GOARCH)-$(VERSION).$(ARCHIVE_EXT)
+CNMS_ARCHIVE_NAME = azure-cnms-$(GOOS)-$(GOARCH)-$(VERSION).$(ARCHIVE_EXT)
 
 # Docker libnetwork (CNM) plugin v2 image parameters.
 CNM_PLUGIN_IMAGE ?= microsoft/azure-vnet-plugin
@@ -95,8 +96,8 @@ azure-vnet: $(CNI_BUILD_DIR)/azure-vnet$(EXE_EXT)
 azure-vnet-ipam: $(CNI_BUILD_DIR)/azure-vnet-ipam$(EXE_EXT)
 azure-cni-plugin: azure-vnet azure-vnet-ipam cni-archive
 azure-cns:	$(CNS_BUILD_DIR)/azure-cns$(EXE_EXT) cns-archive
-azure-networkmonitor: $(CNI_BUILD_DIR)/networkmonitor$(EXE_EXT)
-all-binaries: azure-networkmonitor
+azure-cnms: $(CNI_BUILD_DIR)/azure-cnms$(EXE_EXT)
+all-binaries: azure-cnms cnms-archive
 
 # Clean all build artifacts.
 .PHONY: clean
@@ -115,8 +116,8 @@ $(CNI_BUILD_DIR)/azure-vnet$(EXE_EXT): $(CNIFILES)
 $(CNI_BUILD_DIR)/azure-vnet-ipam$(EXE_EXT): $(CNIFILES)
 	go build -v -o $(CNI_BUILD_DIR)/azure-vnet-ipam$(EXE_EXT) -ldflags "-X main.version=$(VERSION) -s -w" $(CNI_IPAM_DIR)/*.go
 
-$(CNI_BUILD_DIR)/networkmonitor$(EXE_EXT): $(NETMONFILES)
-	go build -ldflags "-X main.version=v0.0.5" -v -o $(CNI_BUILD_DIR)/networkmonitor $(NETMON_DIR)/*.go
+$(CNI_BUILD_DIR)/azure-cnms$(EXE_EXT): $(CNMSFILES)
+	go build -ldflags "-X main.version=v0.0.5" -v -o $(CNI_BUILD_DIR)/azure-cnms$(EXE_EXT) $(CNMS_DIR)/*.go
 
 # Build the Azure CNS Service.
 $(CNS_BUILD_DIR)/azure-cns$(EXE_EXT): $(CNSFILES)
@@ -198,3 +199,10 @@ cns-archive:
 	chmod 0755 $(CNS_BUILD_DIR)/azure-cns$(EXE_EXT)
 	cd $(CNS_BUILD_DIR) && $(ARCHIVE_CMD) $(CNS_ARCHIVE_NAME) azure-cns$(EXE_EXT)
 	chown $(BUILD_USER):$(BUILD_USER) $(CNS_BUILD_DIR)/$(CNS_ARCHIVE_NAME)
+
+# Create a NetworkMonitor archive for the target platform.
+.PHONY: cnms-archive
+cnms-archive:
+	chmod 0755 $(CNI_BUILD_DIR)/azure-cnms$(EXE_EXT)
+	cd $(CNI_BUILD_DIR) && $(ARCHIVE_CMD) $(CNMS_ARCHIVE_NAME) azure-cnms$(EXE_EXT)
+	chown $(BUILD_USER):$(BUILD_USER) $(CNI_BUILD_DIR)/$(CNMS_ARCHIVE_NAME)
