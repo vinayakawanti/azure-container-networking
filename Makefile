@@ -38,6 +38,10 @@ CNSFILES = \
 	$(COREFILES) \
 	$(CNMFILES)
 
+NETMONFILES = \
+	$(wildcard networkmonitor/*.go) \
+	$(COREFILES)
+
 # Build defaults.
 GOOS ?= linux
 GOARCH ?= amd64
@@ -91,7 +95,8 @@ azure-vnet: $(CNI_BUILD_DIR)/azure-vnet$(EXE_EXT)
 azure-vnet-ipam: $(CNI_BUILD_DIR)/azure-vnet-ipam$(EXE_EXT)
 azure-cni-plugin: azure-vnet azure-vnet-ipam cni-archive
 azure-cns:	$(CNS_BUILD_DIR)/azure-cns$(EXE_EXT) cns-archive
-all-binaries: azure-cnm-plugin azure-cni-plugin azure-cns
+azure-networkmonitor: $(CNI_BUILD_DIR)/networkmonitor$(EXE_EXT)
+all-binaries: azure-networkmonitor
 
 # Clean all build artifacts.
 .PHONY: clean
@@ -109,6 +114,8 @@ $(CNI_BUILD_DIR)/azure-vnet$(EXE_EXT): $(CNIFILES)
 # Build the Azure CNI IPAM plugin.
 $(CNI_BUILD_DIR)/azure-vnet-ipam$(EXE_EXT): $(CNIFILES)
 	go build -v -o $(CNI_BUILD_DIR)/azure-vnet-ipam$(EXE_EXT) -ldflags "-X main.version=$(VERSION) -s -w" $(CNI_IPAM_DIR)/*.go
+
+$(CNI_BUILD_DIR)/networkmonitor$(EXE_EXT): $(NETMONFILES)
 	go build -ldflags "-X main.version=v0.0.5" -v -o $(CNI_BUILD_DIR)/networkmonitor $(NETMON_DIR)/*.go
 
 # Build the Azure CNS Service.
