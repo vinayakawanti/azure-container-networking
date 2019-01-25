@@ -131,6 +131,8 @@ func main() {
 		},
 	}
 
+	reportManager.CNIReport.GetOSDetails()
+
 	netMonitor := &network.NetworkMonitor{
 		AddRulesToBeValidated:    make(map[string]int),
 		DeleteRulesToBeValidated: make(map[string]int),
