@@ -18,7 +18,7 @@ import (
 
 const (
 	// Service name.
-	name                    = "azure-testcnimonitor"
+	name                    = "azure-cnimonitor"
 	pluginName              = "azure-vnet"
 	DEFAULT_TIMEOUT_IN_SECS = "10"
 )
@@ -124,6 +124,7 @@ func main() {
 		ContentType: telemetry.ContentType,
 		Report: &telemetry.CNIReport{
 			Context:          "AzureCNINetworkMonitor",
+			Version:          version,
 			SystemDetails:    telemetry.SystemInfo{},
 			InterfaceDetails: telemetry.InterfaceInfo{},
 			BridgeDetails:    telemetry.BridgeInfo{},
