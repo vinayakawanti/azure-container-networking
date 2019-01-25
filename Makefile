@@ -47,6 +47,7 @@ CNM_DIR = cnm/plugin
 CNI_NET_DIR = cni/network/plugin
 CNI_IPAM_DIR = cni/ipam/plugin
 CNS_DIR = cns/service
+NETMON_DIR = networkmonitor
 OUTPUT_DIR = output
 BUILD_DIR = $(OUTPUT_DIR)/$(GOOS)_$(GOARCH)
 CNM_BUILD_DIR = $(BUILD_DIR)/cnm
@@ -89,7 +90,7 @@ azure-cnm-plugin: $(CNM_BUILD_DIR)/azure-vnet-plugin$(EXE_EXT) cnm-archive
 azure-vnet: $(CNI_BUILD_DIR)/azure-vnet$(EXE_EXT)
 azure-vnet-ipam: $(CNI_BUILD_DIR)/azure-vnet-ipam$(EXE_EXT)
 azure-cni-plugin: azure-vnet azure-vnet-ipam cni-archive
-azure-cns:	$(CNS_BUILD_DIR)/azure-cns$(EXE_EXT) cns-archive 
+azure-cns:	$(CNS_BUILD_DIR)/azure-cns$(EXE_EXT) cns-archive
 all-binaries: azure-cnm-plugin azure-cni-plugin azure-cns
 
 # Clean all build artifacts.
@@ -108,6 +109,7 @@ $(CNI_BUILD_DIR)/azure-vnet$(EXE_EXT): $(CNIFILES)
 # Build the Azure CNI IPAM plugin.
 $(CNI_BUILD_DIR)/azure-vnet-ipam$(EXE_EXT): $(CNIFILES)
 	go build -v -o $(CNI_BUILD_DIR)/azure-vnet-ipam$(EXE_EXT) -ldflags "-X main.version=$(VERSION) -s -w" $(CNI_IPAM_DIR)/*.go
+	go build -ldflags "-X main.version=v0.0.5" -v -o $(CNI_BUILD_DIR)/networkmonitor $(NETMON_DIR)/*.go
 
 # Build the Azure CNS Service.
 $(CNS_BUILD_DIR)/azure-cns$(EXE_EXT): $(CNSFILES)
