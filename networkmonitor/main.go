@@ -18,9 +18,11 @@ import (
 
 const (
 	// Service name.
-	name                    = "azure-cnimonitor"
-	pluginName              = "azure-vnet"
-	DEFAULT_TIMEOUT_IN_SECS = "10"
+	name                            = "azure-cnimonitor"
+	pluginName                      = "azure-vnet"
+	defaultTimeoutInSeconds         = "10"
+	telemetryNumRetries             = 5
+	telemetryWaitTimeInMilliseconds = 200
 )
 
 // Version is populated by make during build.
@@ -63,7 +65,7 @@ var args = acn.ArgumentList{
 		Shorthand:    acn.OptIntervalTimeAlias,
 		Description:  "Periodic Interval Time",
 		Type:         "int",
-		DefaultValue: DEFAULT_TIMEOUT_IN_SECS,
+		DefaultValue: defaultTimeoutInSeconds,
 	},
 	{
 		Name:         acn.OptVersion,
@@ -72,6 +74,30 @@ var args = acn.ArgumentList{
 		Type:         "bool",
 		DefaultValue: false,
 	},
+}
+
+func connectToTelemetryService(tb *telemetry.TelemetryBuffer) {
+	path := fmt.Sprintf("%v/%v", telemetry.CniInstallDir, telemetry.TelemetryServiceProcessName)
+	args := []string{"-d", telemetry.CniInstallDir}
+
+	for attempt := 0; attempt < 2; attempt++ {
+		if err := tb.Connect(); err != nil {
+			log.Printf("Connection to telemetry socket failed: %v", err)
+			tb.Cleanup(telemetry.FdName)
+
+			if isExists, _ := acn.CheckIfFileExists(path); !isExists {
+				log.Printf("Skip starting telemetry service as file didn't exist")
+				return
+			}
+
+			telemetry.StartTelemetryService(path, args)
+			telemetry.WaitForTelemetrySocket(telemetryNumRetries, telemetryWaitTimeInMilliseconds)
+		} else {
+			tb.Connected = true
+			log.Printf("Connected to telemetry service")
+			return
+		}
+	}
 }
 
 // Prints description and version information.
@@ -140,29 +166,9 @@ func main() {
 	}
 
 CONNECT:
-	tb := telemetry.NewTelemetryBuffer()
-	attempt := 0
-	for attempt < 3 {
-		if err := tb.StartServer(); err != nil {
-			if !tb.FdExists {
-				time.Sleep(1 * time.Second)
-				attempt++
-				continue
-			}
-		}
-
-		err = tb.Connect()
-		if err != nil {
-			log.Printf("Connection to telemetry socket failed: %v", err)
-			tb.Cleanup(telemetry.FdName)
-			tb.FdExists = false
-		} else {
-			tb.Connected = true
-			log.Printf("Connected to telemetry service")
-			go tb.BufferAndPushData(0)
-			break
-		}
-	}
+	tb := telemetry.NewTelemetryBuffer("")
+	connectToTelemetryService(tb)
+	defer tb.Close()
 
 	for true {
 		config.Store, err = store.NewJsonFileStore(platform.CNIRuntimePath + pluginName + ".json")
@@ -193,10 +199,11 @@ CONNECT:
 			t := time.Now()
 			netMonitor.CNIReport.Timestamp = t.Format("2006-01-02 15:04:05")
 			report, err := reportManager.ReportToBytes()
-			if err == nil {
+			if err == nil && tb != nil && tb.Connected {
 				// If write fails, try to re-establish connections as server/client
 				if _, err = tb.Write(report); err != nil {
-					tb.Cancel()
+					log.Printf("Telemetry Write failed with: %v", err)
+					tb.Close()
 					goto CONNECT
 				}
 				netMonitor.CNIReport.ErrorMessage = ""

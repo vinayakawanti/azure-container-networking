@@ -11,40 +11,53 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
-	"os"
-	"strconv"
 	"strings"
-	"syscall"
+	"sync"
 	"time"
 
+	"github.com/Azure/azure-container-networking/common"
 	"github.com/Azure/azure-container-networking/log"
+	"github.com/Azure/azure-container-networking/platform"
 )
+
+// TelemetryConfig - telemetry config read by telemetry service
+type TelemetryConfig struct {
+	ReportToHostIntervalInSeconds time.Duration `json:"reportToHostIntervalInSeconds"`
+}
 
 // FdName - file descriptor name
 // Delimiter - delimiter for socket reads/writes
-// HostNetAgentURL - host net agent url of type payload
-// DefaultDncReportsSize - default DNC report slice size
-// DefaultCniReportsSize - default CNI report slice size
-// DefaultNpmReportsSize - default NPM report slice size
+// azureHostReportURL - host net agent url of type payload
 // DefaultInterval - default interval for sending payload to host
+// logName - telemetry log name
+// MaxPayloadSize - max payload size in bytes
 const (
-	FdName                  = "azure-cni-telemetry"
-	Delimiter               = '\n'
-	HostNetAgentURL         = "http://169.254.169.254/machine/plugins?comp=netagent&type=payload"
-	telemetryMgrProcessName = "azuretelemetrymgr"
-	DefaultInterval         = 1 * time.Minute
+	FdName                    = "azure-vnet-telemetry"
+	Delimiter                 = '\n'
+	azureHostReportURL        = "http://168.63.129.16/machine/plugins?comp=netagent&type=payload"
+	minInterval               = 10 * time.Second
+	logName                   = "azure-vnet-telemetry"
+	MaxPayloadSize     uint16 = 65535
+	dnc                       = "DNC"
+	cns                       = "CNS"
+	npm                       = "NPM"
+	cni                       = "CNI"
 )
+
+var payloadSize uint16 = 0
 
 // TelemetryBuffer object
 type TelemetryBuffer struct {
-	client      net.Conn
-	listener    net.Listener
-	connections []net.Conn
-	payload     Payload
-	FdExists    bool
-	Connected   bool
-	data        chan interface{}
-	cancel      chan bool
+	client             net.Conn
+	listener           net.Listener
+	connections        []net.Conn
+	azureHostReportURL string
+	payload            Payload
+	FdExists           bool
+	Connected          bool
+	data               chan interface{}
+	cancel             chan bool
+	mutex              sync.Mutex
 }
 
 // Payload object holds the different types of reports
@@ -56,32 +69,53 @@ type Payload struct {
 }
 
 // NewTelemetryBuffer - create a new TelemetryBuffer
-func NewTelemetryBuffer() *TelemetryBuffer {
+func NewTelemetryBuffer(hostReportURL string) *TelemetryBuffer {
 	var tb TelemetryBuffer
+
+	if hostReportURL == "" {
+		tb.azureHostReportURL = azureHostReportURL
+	}
+
 	tb.data = make(chan interface{})
 	tb.cancel = make(chan bool, 1)
-	tb.connections = make([]net.Conn, 1)
+	tb.connections = make([]net.Conn, 0)
 	tb.payload.DNCReports = make([]DNCReport, 0)
 	tb.payload.CNIReports = make([]CNIReport, 0)
 	tb.payload.NPMReports = make([]NPMReport, 0)
 	tb.payload.CNSReports = make([]CNSReport, 0)
+
 	return &tb
 }
 
+func remove(s []net.Conn, i int) []net.Conn {
+	if len(s) > 0 && i < len(s) {
+		s[i] = s[len(s)-1]
+		return s[:len(s)-1]
+	}
+
+	log.Printf("tb connections remove failed index %v len %v", i, len(s))
+	return s
+}
+
+// Starts Telemetry server listening on unix domain socket
 func (tb *TelemetryBuffer) StartServer() error {
 	err := tb.Listen(FdName)
 	if err != nil {
 		tb.FdExists = strings.Contains(err.Error(), "in use") || strings.Contains(err.Error(), "Access is denied")
+		log.Printf("Listen returns: %v", err.Error())
 		return err
 	}
 
+	log.Printf("Telemetry service started")
 	// Spawn server goroutine to handle incoming connections
 	go func() {
 		for {
 			// Spawn worker goroutines to communicate with client
 			conn, err := tb.listener.Accept()
 			if err == nil {
+				tb.mutex.Lock()
 				tb.connections = append(tb.connections, conn)
+				tb.mutex.Unlock()
 				go func() {
 					for {
 						reportStr, err := read(conn)
@@ -93,7 +127,6 @@ func (tb *TelemetryBuffer) StartServer() error {
 								json.Unmarshal([]byte(reportStr), &npmReport)
 								tb.data <- npmReport
 							} else if _, ok := tmp["CniSucceeded"]; ok {
-								log.Printf("Got cni report")
 								var cniReport CNIReport
 								json.Unmarshal([]byte(reportStr), &cniReport)
 								tb.data <- cniReport
@@ -106,9 +139,33 @@ func (tb *TelemetryBuffer) StartServer() error {
 								json.Unmarshal([]byte(reportStr), &cnsReport)
 								tb.data <- cnsReport
 							}
+						} else {
+							var index int
+							var value net.Conn
+							var found bool
+
+							tb.mutex.Lock()
+							defer tb.mutex.Unlock()
+
+							for index, value = range tb.connections {
+								if value == conn {
+									conn.Close()
+									found = true
+									break
+								}
+							}
+
+							if found {
+								tb.connections = remove(tb.connections, index)
+							}
+
+							return
 						}
 					}
 				}()
+			} else {
+				log.Printf("Telemetry Server accept error %v", err)
+				return
 			}
 		}
 	}()
@@ -129,11 +186,11 @@ func (tb *TelemetryBuffer) Connect() error {
 
 // BufferAndPushData - BufferAndPushData running an instance if it isn't already being run elsewhere
 func (tb *TelemetryBuffer) BufferAndPushData(intervalms time.Duration) {
-	defer tb.close()
+	defer tb.Close()
 	if !tb.FdExists {
-		log.Printf("Buffer telemetry data and send it to host")
-		if intervalms < DefaultInterval {
-			intervalms = DefaultInterval
+		log.Printf("[Telemetry] Buffer telemetry data and send it to host")
+		if intervalms < minInterval {
+			intervalms = minInterval
 		}
 
 		interval := time.NewTicker(intervalms).C
@@ -145,17 +202,18 @@ func (tb *TelemetryBuffer) BufferAndPushData(intervalms time.Duration) {
 				if err := tb.sendToHost(); err == nil {
 					tb.payload.reset()
 				} else {
-					log.Printf("sending to host failed with error %+v", err)
+					log.Printf("[Telemetry] sending to host failed with error %+v", err)
 				}
 			case report := <-tb.data:
-				log.Printf("Got data..buffer it")
 				tb.payload.push(report)
 			case <-tb.cancel:
+				log.Printf("server cancel event")
 				goto EXIT
 			}
 		}
 	} else {
 		<-tb.cancel
+		log.Printf("Received cancel event")
 	}
 
 EXIT:
@@ -188,21 +246,29 @@ func (tb *TelemetryBuffer) Cancel() {
 	tb.cancel <- true
 }
 
-// close - close all connections
-func (tb *TelemetryBuffer) close() {
+// Close - close all connections
+func (tb *TelemetryBuffer) Close() {
 	if tb.client != nil {
 		tb.client.Close()
+		tb.client = nil
 	}
 
 	if tb.listener != nil {
+		log.Printf("server close")
 		tb.listener.Close()
 	}
+
+	tb.mutex.Lock()
+	defer tb.mutex.Unlock()
 
 	for _, conn := range tb.connections {
 		if conn != nil {
 			conn.Close()
 		}
 	}
+
+	tb.connections = nil
+	tb.connections = make([]net.Conn, 0)
 }
 
 // sendToHost - send payload to host
@@ -211,7 +277,7 @@ func (tb *TelemetryBuffer) sendToHost() error {
 	var body bytes.Buffer
 	log.Printf("Sending payload %+v", tb.payload)
 	json.NewEncoder(&body).Encode(tb.payload)
-	resp, err := httpc.Post(HostNetAgentURL, ContentType, &body)
+	resp, err := httpc.Post(tb.azureHostReportURL, ContentType, &body)
 	if err != nil {
 		return fmt.Errorf("[Telemetry] HTTP Post returned error %v", err)
 	}
@@ -227,41 +293,39 @@ func (tb *TelemetryBuffer) sendToHost() error {
 
 // push - push the report (x) to corresponding slice
 func (pl *Payload) push(x interface{}) {
-
 	metadata, err := getHostMetadata()
 	if err != nil {
 		log.Printf("Error getting metadata %v", err)
-		return
+	} else {
+		err = saveHostMetadata(metadata)
+		if err != nil {
+			log.Printf("saving host metadata failed with :%v", err)
+		}
 	}
 
-	err = saveHostMetadata(metadata)
-	if err != nil {
-		log.Printf("saving host metadata failed with :%v", err)
-	}
-
-	switch x.(type) {
-	case DNCReport:
-		dncReport := x.(DNCReport)
-		dncReport.Metadata = metadata
-		pl.DNCReports = append(pl.DNCReports, dncReport)
-	case CNIReport:
-		cniReport := x.(CNIReport)
-		metadata.Tags = metadata.Tags + ";" + cniReport.Version
-		cniReport.Metadata = metadata
-		log.Printf("cni report : %+v", cniReport)
-		pl.CNIReports = append(pl.CNIReports, cniReport)
-	case NPMReport:
-		npmReport := x.(NPMReport)
-		npmReport.Metadata = metadata
-		pl.NPMReports = append(pl.NPMReports, npmReport)
-	case CNSReport:
-		cnsReport := x.(CNSReport)
-		cnsReport.Metadata = metadata
-		pl.CNSReports = append(pl.CNSReports, cnsReport)
+	if notExceeded, reportType := pl.payloadCapNotExceeded(x); notExceeded {
+		switch reportType {
+		case dnc:
+			dncReport := x.(DNCReport)
+			dncReport.Metadata = metadata
+			pl.DNCReports = append(pl.DNCReports, dncReport)
+		case cni:
+			cniReport := x.(CNIReport)
+			cniReport.Metadata = metadata
+			pl.CNIReports = append(pl.CNIReports, cniReport)
+		case npm:
+			npmReport := x.(NPMReport)
+			npmReport.Metadata = metadata
+			pl.NPMReports = append(pl.NPMReports, npmReport)
+		case cns:
+			cnsReport := x.(CNSReport)
+			cnsReport.Metadata = metadata
+			pl.CNSReports = append(pl.CNSReports, cnsReport)
+		}
 	}
 }
 
-// reset - reset payload slices
+// reset - reset payload slices and sets payloadSize to 0
 func (pl *Payload) reset() {
 	pl.DNCReports = nil
 	pl.DNCReports = make([]DNCReport, 0)
@@ -271,31 +335,61 @@ func (pl *Payload) reset() {
 	pl.NPMReports = make([]NPMReport, 0)
 	pl.CNSReports = nil
 	pl.CNSReports = make([]CNSReport, 0)
+	payloadSize = 0
 }
 
+// payloadCapNotExceeded - Returns whether payload cap will be exceeded as a result of adding the new report; and the report type
+//                         If the cap is not exceeded, we update the payload size here.
+func (pl *Payload) payloadCapNotExceeded(x interface{}) (notExceeded bool, reportType string) {
+	var body bytes.Buffer
+	switch x.(type) {
+	case DNCReport:
+		reportType = dnc
+		json.NewEncoder(&body).Encode(x.(DNCReport))
+	case CNIReport:
+		reportType = cni
+		json.NewEncoder(&body).Encode(x.(CNIReport))
+	case NPMReport:
+		reportType = npm
+		json.NewEncoder(&body).Encode(x.(NPMReport))
+	case CNSReport:
+		reportType = cns
+		json.NewEncoder(&body).Encode(x.(CNSReport))
+	}
+
+	updatedPayloadSize := uint16(body.Len()) + payloadSize
+	if notExceeded = updatedPayloadSize < MaxPayloadSize && payloadSize < updatedPayloadSize; notExceeded {
+		payloadSize = updatedPayloadSize
+	}
+
+	return
+}
+
+// saveHostMetadata - save metadata got from wireserver to json file
 func saveHostMetadata(metadata Metadata) error {
 	dataBytes, err := json.Marshal(metadata)
 	if err != nil {
 		return fmt.Errorf("[Telemetry] marshal data failed with err %+v", err)
 	}
 
-	if err = ioutil.WriteFile(MetadatatFile, dataBytes, 0644); err != nil {
-		log.Printf("[telemetry] Writing metadata to file failed: %v", err)
+	if err = ioutil.WriteFile(metadataFile, dataBytes, 0644); err != nil {
+		log.Printf("[Telemetry] Writing metadata to file failed: %v", err)
 	}
 
 	return err
 }
 
-// GetHostMetadata - retrieve metadata from host
+// getHostMetadata - retrieve metadata from host
 func getHostMetadata() (Metadata, error) {
-	content, err := ioutil.ReadFile(MetadatatFile)
+	content, err := ioutil.ReadFile(metadataFile)
 	if err == nil {
 		var metadata Metadata
 		if err = json.Unmarshal(content, &metadata); err == nil {
-			log.Printf("Returning hostmetadata saved in state")
 			return metadata, nil
 		}
 	}
+
+	log.Printf("[Telemetry] Request metadata from wireserver")
 
 	req, err := http.NewRequest("GET", metadataURL, nil)
 	if err != nil {
@@ -317,32 +411,7 @@ func getHostMetadata() (Metadata, error) {
 		err = fmt.Errorf("[Telemetry] Request failed with HTTP error %d", resp.StatusCode)
 	} else if resp.Body != nil {
 		err = json.NewDecoder(resp.Body).Decode(&metareport)
-		if err == nil {
-			// // Find Metadata struct in report and try to set values
-			// v := reflect.ValueOf(report).Elem().FieldByName("Metadata")
-			// log.Printf("populate metadata %v", v)
-			// if v.CanSet() {
-			// 	v.FieldByName("Location").SetString(metareport.Metadata.Location)
-			// 	v.FieldByName("VMName").SetString(metareport.Metadata.VMName)
-			// 	v.FieldByName("Offer").SetString(metareport.Metadata.Offer)
-			// 	v.FieldByName("OsType").SetString(metareport.Metadata.OsType)
-			// 	v.FieldByName("PlacementGroupID").SetString(metareport.Metadata.PlacementGroupID)
-			// 	v.FieldByName("PlatformFaultDomain").SetString(metareport.Metadata.PlatformFaultDomain)
-			// 	v.FieldByName("PlatformUpdateDomain").SetString(metareport.Metadata.PlatformUpdateDomain)
-			// 	v.FieldByName("Publisher").SetString(metareport.Metadata.Publisher)
-			// 	v.FieldByName("ResourceGroupName").SetString(metareport.Metadata.ResourceGroupName)
-			// 	v.FieldByName("Sku").SetString(metareport.Metadata.Sku)
-			// 	v.FieldByName("SubscriptionID").SetString(metareport.Metadata.SubscriptionID)
-			// 	v.FieldByName("Tags").SetString(metareport.Metadata.Tags)
-			// 	v.FieldByName("OSVersion").SetString(metareport.Metadata.OSVersion)
-			// 	v.FieldByName("VMID").SetString(metareport.Metadata.VMID)
-			// 	v.FieldByName("VMSize").SetString(metareport.Metadata.VMSize)
-			// 	log.Printf("done metadata")
-			// } else {
-			// 	log.Printf("not able to set")
-			// 	err = fmt.Errorf("[Telemetry] Unable to set metadata values")
-			// }
-		} else {
+		if err != nil {
 			err = fmt.Errorf("[Telemetry] Unable to decode response body due to error: %s", err.Error())
 		}
 	} else {
@@ -352,45 +421,46 @@ func getHostMetadata() (Metadata, error) {
 	return metareport.Metadata, err
 }
 
-func StartTelemetryManagerProcess() error {
-	content, err := ioutil.ReadFile(PidFile)
-	if err == nil {
-		pidStr := strings.TrimSpace(string(content))
-		log.Printf("telemetry pid %v. check if its running", pidStr)
-		pid, _ := strconv.Atoi(pidStr)
-		process, err := os.FindProcess(pid)
-		if err == nil {
-			err := process.Signal(syscall.Signal(0))
-			if err == nil && checkIfSockExists() {
-				log.Printf("azure telemetry process already running with pid %v", pid)
-				return nil
-			} else if err == nil {
-				process.Kill()
-			}
+// WaitForTelemetrySocket - Block still pipe/sock created or until max attempts retried
+func WaitForTelemetrySocket(maxAttempt int, waitTimeInMillisecs time.Duration) {
+	for attempt := 0; attempt < maxAttempt; attempt++ {
+		if SockExists() {
+			break
 		}
-	}
 
-	log.Printf("[telemetry] Starting telemetry manager process")
-	pid, err := startTelemetryManager(telemetryMgrProcessName)
-	if err != nil {
-		log.Printf("Failed to start telemetry manager process :%v", err)
+		time.Sleep(waitTimeInMillisecs * time.Millisecond)
+	}
+}
+
+// StartTelemetryService - Kills if any telemetry service runs and start new telemetry service
+func StartTelemetryService(path string, args []string) error {
+	platform.KillProcessByName(TelemetryServiceProcessName)
+
+	log.Printf("[Telemetry] Starting telemetry service process :%v args:%v", path, args)
+
+	if err := common.StartProcess(path, args); err != nil {
+		log.Printf("[Telemetry] Failed to start telemetry service process :%v", err)
 		return err
 	}
 
-	log.Printf("[Telemetry] Telemetry manager process started with pid %d", pid)
-	time.Sleep(2 * time.Second)
+	log.Printf("[Telemetry] Telemetry service started")
 
-	if err := os.Truncate(PidFile, 0); err != nil {
-		log.Printf("[Telemetry] Truncating pid file failed %v", err)
-	}
-
-	buf := []byte(strconv.Itoa(pid))
-
-	if err := ioutil.WriteFile(PidFile, buf, 0644); err != nil {
-		log.Printf("[telemetry] Writing pid to file failed: %v", err)
-		return nil
-	}
-
-	log.Printf("saved pid %v", pid)
 	return nil
+}
+
+// ReadConfigFile - Read telemetry config file and populate to structure
+func ReadConfigFile(filePath string) (TelemetryConfig, error) {
+	config := TelemetryConfig{}
+
+	b, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		log.Printf("[Telemetry] Failed to read telemetry config: %v", err)
+		return config, err
+	}
+
+	if err = json.Unmarshal(b, &config); err != nil {
+		log.Printf("[Telemetry] unmarshal failed with %v", err)
+	}
+
+	return config, err
 }

@@ -22,6 +22,8 @@ import (
 )
 
 const (
+	// NPMTelemetryFile Path.
+	NPMTelemetryFile = platform.NPMRuntimePath + "AzureNPMTelemetry.json"
 	// CNITelemetryFile Path.
 	CNITelemetryFile = platform.CNIRuntimePath + "AzureCNITelemetry.json"
 
@@ -219,10 +221,8 @@ func (report *CNIReport) GetReport(name string, version string, ipamQueryURL str
 	report.Name = name
 	report.Version = version
 
-	// report.GetOrchestratorDetails()
 	report.GetSystemDetails()
 	report.GetOSDetails()
-	report.GetInterfaceDetails(ipamQueryURL)
 }
 
 // GetReport retrives npm and kubernetes cluster related info and create a report structure.
@@ -236,21 +236,11 @@ func (report *NPMReport) GetReport(clusterID, nodeName, npmVersion, kubernetesVe
 
 // SendReport will send telemetry report to HostNetAgent.
 func (reportMgr *ReportManager) SendReport(tb *TelemetryBuffer) error {
-	if tb.Connected {
-		log.Printf("[Telemetry] Going to send Telemetry report to hostnetagent %v", reportMgr.HostNetAgentURL)
+	var err error
+	var report []byte
 
-		switch reportMgr.Report.(type) {
-		case *CNIReport:
-			log.Printf("[Telemetry] %+v", reportMgr.Report.(*CNIReport))
-		case *NPMReport:
-			log.Printf("[Telemetry] %+v", reportMgr.Report.(*NPMReport))
-		case *DNCReport:
-			log.Printf("[Telemetry] %+v", reportMgr.Report.(*DNCReport))
-		default:
-			log.Printf("[Telemetry] Invalid report type")
-		}
-
-		report, err := reportMgr.ReportToBytes()
+	if tb != nil && tb.Connected {
+		report, err = reportMgr.ReportToBytes()
 		if err == nil {
 			// If write fails, try to re-establish connections as server/client
 			if _, err = tb.Write(report); err != nil {
@@ -259,7 +249,7 @@ func (reportMgr *ReportManager) SendReport(tb *TelemetryBuffer) error {
 		}
 	}
 
-	return nil
+	return err
 }
 
 // SetReportState will save the state in file if telemetry report sent successfully.
@@ -288,7 +278,6 @@ func (reportMgr *ReportManager) SetReportState(telemetryFile string) error {
 
 	// set IsNewInstance in report
 	reflect.ValueOf(reportMgr.Report).Elem().FieldByName("IsNewInstance").SetBool(false)
-	log.Printf("[Telemetry] SetReportState succeeded")
 	return nil
 }
 
@@ -321,14 +310,12 @@ func (report *CNIReport) GetInterfaceDetails(queryUrl string) {
 
 	interfaces, err := net.Interfaces()
 	if err != nil {
-		report.InterfaceDetails = InterfaceInfo{}
 		report.InterfaceDetails.ErrorMessage = "Getting all interfaces failed due to " + err.Error()
 		return
 	}
 
 	resp, err := http.Get(queryUrl)
 	if err != nil {
-		report.InterfaceDetails = InterfaceInfo{}
 		report.InterfaceDetails.ErrorMessage = "Http get failed in getting interface details " + err.Error()
 		return
 	}
@@ -336,7 +323,6 @@ func (report *CNIReport) GetInterfaceDetails(queryUrl string) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		report.InterfaceDetails = InterfaceInfo{}
 		errMsg := fmt.Sprintf("Error while getting interface details. http code :%d", resp.StatusCode)
 		report.InterfaceDetails.ErrorMessage = errMsg
 		log.Printf(errMsg)
@@ -348,7 +334,6 @@ func (report *CNIReport) GetInterfaceDetails(queryUrl string) {
 	decoder := xml.NewDecoder(resp.Body)
 	err = decoder.Decode(&doc)
 	if err != nil {
-		report.InterfaceDetails = InterfaceInfo{}
 		report.InterfaceDetails.ErrorMessage = "xml decode failed due to " + err.Error()
 		return
 	}
@@ -432,7 +417,10 @@ func (report *CNIReport) GetOrchestratorDetails() {
 }
 
 // ReportToBytes - returns the report bytes
-func (reportMgr *ReportManager) ReportToBytes() (report []byte, err error) {
+func (reportMgr *ReportManager) ReportToBytes() ([]byte, error) {
+	var err error
+	var report []byte
+
 	switch reportMgr.Report.(type) {
 	case *CNIReport:
 	case *NPMReport:
@@ -442,9 +430,10 @@ func (reportMgr *ReportManager) ReportToBytes() (report []byte, err error) {
 		err = fmt.Errorf("[Telemetry] Invalid report type")
 	}
 
-	if err == nil {
-		report, err = json.Marshal(reportMgr.Report)
+	if err != nil {
+		return []byte{}, err
 	}
 
-	return
+	report, err = json.Marshal(reportMgr.Report)
+	return report, err
 }

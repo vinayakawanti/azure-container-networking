@@ -94,3 +94,23 @@ func ExecuteShellCommand(command string) (string, error) {
 
 	return out.String(), nil
 }
+
+func StartProcess(path string, args []string) error {
+	var attr = os.ProcAttr{
+		Env: os.Environ(),
+		Files: []*os.File{
+			os.Stdin,
+			nil,
+			nil,
+		},
+	}
+
+	processArgs := append([]string{path}, args...)
+	process, err := os.StartProcess(path, processArgs, &attr)
+	if err == nil {
+		// Release detaches the process
+		return process.Release()
+	}
+
+	return err
+}
