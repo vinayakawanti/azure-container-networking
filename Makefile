@@ -117,7 +117,7 @@ $(CNI_BUILD_DIR)/azure-vnet-ipam$(EXE_EXT): $(CNIFILES)
 	go build -v -o $(CNI_BUILD_DIR)/azure-vnet-ipam$(EXE_EXT) -ldflags "-X main.version=$(VERSION) -s -w" $(CNI_IPAM_DIR)/*.go
 
 $(CNI_BUILD_DIR)/azure-cnms$(EXE_EXT): $(CNMSFILES)
-	go build -ldflags "-X main.version=v0.0.5" -v -o $(CNI_BUILD_DIR)/azure-cnms$(EXE_EXT) $(CNMS_DIR)/*.go
+	go build -ldflags "-X main.version=v0.0.6" -v -o $(CNI_BUILD_DIR)/azure-cnms$(EXE_EXT) $(CNMS_DIR)/*.go
 
 # Build the Azure CNS Service.
 $(CNS_BUILD_DIR)/azure-cns$(EXE_EXT): $(CNSFILES)
