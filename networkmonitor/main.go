@@ -194,12 +194,12 @@ CONNECT:
 			return
 		}
 
-		if netMonitor.CNIReport.ErrorMessage != "" {
+		if netMonitor.CNIReport.ErrorMessage != "" && tb != nil && tb.Connected {
 			log.Printf("Report discrepancy in rules")
 			t := time.Now()
 			netMonitor.CNIReport.Timestamp = t.Format("2006-01-02 15:04:05")
 			report, err := reportManager.ReportToBytes()
-			if err == nil && tb != nil && tb.Connected {
+			if err == nil {
 				// If write fails, try to re-establish connections as server/client
 				if _, err = tb.Write(report); err != nil {
 					log.Printf("Telemetry Write failed with: %v", err)
