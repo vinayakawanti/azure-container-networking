@@ -20,6 +20,10 @@ type CNSConfig struct {
 	TelemetrySettings TelemetrySettings
 	ManagedSettings   ManagedSettings
 	ChannelMode       string
+	UseHttps		  bool
+	TlsSubjectName	  string
+	TlsCertificateFilePath string
+	TlsEndpoint string
 }
 
 type TelemetrySettings struct {

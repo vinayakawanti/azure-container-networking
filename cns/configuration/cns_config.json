@@ -14,5 +14,9 @@
         "NodeID": "",
         "NodeSyncIntervalInSeconds": 30
     },
-    "ChannelMode": "Direct"
+    "ChannelMode": "Direct",
+    "UseHttps" : false,
+    "TlsSubjectName" : "",
+    "TlsCertificateFilePath" : "",
+    "TlsEndpoint" : "localhost:10091"
 }

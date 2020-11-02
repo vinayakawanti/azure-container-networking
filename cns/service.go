@@ -70,10 +70,18 @@ func (service *Service) Initialize(config *common.ServiceConfig) error {
 			return err
 		}
 
-		// Start the listener.
-		err = listener.Start(config.ErrChan)
-		if err != nil {
-			return err
+		if(config.TlsSettings.TlsEndpoint != ""){
+			// Start the listener and HTTP and HTTPS server.
+			err = listener.StartTLS(config.ErrChan, config.TlsSettings)
+			if err != nil {
+				return err
+			}
+		} else{
+			// Start the listener.
+			err = listener.Start(config.ErrChan)
+			if err != nil {
+				return err
+			}
 		}
 
 		config.Listener = listener
