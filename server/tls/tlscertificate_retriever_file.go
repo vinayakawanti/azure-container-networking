@@ -27,7 +27,7 @@ func (fcert *filetlsCertificateRetriever) GetCertificate() (*x509.Certificate, e
 		if block.Type == CertLabel {
 			cert, err := x509.ParseCertificate(block.Bytes)
 			if err != nil {
-				return nil, fmt.Errorf("Failed to parse certificate with error %+v", err)
+				return nil, fmt.Errorf("Failed to parse certificate at location %s with error %+v",fcert.settings.TlsCertificateFilePath, err)
 			}
 			if cert.IsCA != true {
 				return cert, nil
@@ -39,7 +39,6 @@ func (fcert *filetlsCertificateRetriever) GetCertificate() (*x509.Certificate, e
 
 // GetPrivateKey Returns the private key associated with the pfx
 func (fcert *filetlsCertificateRetriever) GetPrivateKey() (crypto.PrivateKey, error) {
-
 	for _, block := range fcert.pemBlock {
 		if block.Type == PrivateKeyLabel {
 			pk, err := x509.ParsePKCS1PrivateKey(block.Bytes)
@@ -49,24 +48,20 @@ func (fcert *filetlsCertificateRetriever) GetPrivateKey() (crypto.PrivateKey, er
 			return pk, nil
 		}
 	}
-
-	return nil, nil
+	return nil, fmt.Errorf("No private key found in certificate bundle located at %s", fcert.settings.TlsCertificateFilePath)
 }
 
 // readPemFile reads a pfx certificate converts it to PEM
 func (fcert *filetlsCertificateRetriever) readPemFile() error {
 	content, err := ioutil.ReadFile(fcert.settings.TlsCertificateFilePath)
 	if err != nil {
-		return fmt.Errorf("Error reading file: %+v ", err)
+		return fmt.Errorf("Error reading file from path %s with error: %+v ",fcert.settings.TlsCertificateFilePath, err)
 	}
 	pemBlock, err := pkcs12.ToPEM(content, "")
-
 	if err != nil {
-		return fmt.Errorf("Could not convert pfx to PEM format")
+		return fmt.Errorf("Could not convert pfx located at %s to PEM format", fcert.settings.TlsCertificateFilePath)
 	}
-
 	fcert.pemBlock = pemBlock
-
 	return nil
 }
 
@@ -77,11 +72,8 @@ func NewFileTlsCertificateRetriever(settings TlsSettings) (TlsCertificateRetriev
 	fileCertStoreRetriever := &filetlsCertificateRetriever{
 		settings: settings,
 	}
-
-	err := fileCertStoreRetriever.readPemFile()
-	if err != nil {
+	if err := fileCertStoreRetriever.readPemFile(); err != nil {
 		return nil, fmt.Errorf("Failed to read pfx file with error %+v", err)
 	}
-
 	return fileCertStoreRetriever, nil
 }

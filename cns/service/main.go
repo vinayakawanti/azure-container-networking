@@ -425,11 +425,11 @@ func main() {
 
 	// Start CNS.
 	if httpRestService != nil {
-		if(cnsconfig.UseHttps){
+		if cnsconfig.UseHttps {
 			config.TlsSettings = localtls.TlsSettings{
 				TlsCertificateSubjectName: cnsconfig.TlsSubjectName,
-				TlsCertificateFilePath: cnsconfig.TlsCertificateFilePath,
-				TlsEndpoint: cnsconfig.TlsEndpoint,
+				TlsCertificateFilePath:    cnsconfig.TlsCertificateFilePath,
+				TlsEndpoint:               cnsconfig.TlsEndpoint,
 			}
 		}
 

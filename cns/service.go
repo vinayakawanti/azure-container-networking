@@ -63,27 +63,23 @@ func (service *Service) Initialize(config *common.ServiceConfig) error {
 		if err != nil {
 			return err
 		}
-
 		// Create the listener.
 		listener, err := acn.NewListener(u)
 		if err != nil {
 			return err
 		}
-
-		if(config.TlsSettings.TlsEndpoint != ""){
+		if config.TlsSettings.TlsEndpoint != "" {
 			// Start the listener and HTTP and HTTPS server.
-			err = listener.StartTLS(config.ErrChan, config.TlsSettings)
-			if err != nil {
-				return err
-			}
-		} else{
-			// Start the listener.
-			err = listener.Start(config.ErrChan)
-			if err != nil {
+			if err = listener.StartTLS(config.ErrChan, config.TlsSettings); err != nil {
 				return err
 			}
 		}
-
+		// Start the listener.
+		// continue to listen on the normal endpoint for http traffic, this will be supported
+		// for sometime until partners migrate fully to https
+		if err = listener.Start(config.ErrChan); err != nil {
+			return err
+		}
 		config.Listener = listener
 	}
 

@@ -4,7 +4,6 @@
 // and modified to our needs per the below license permits
 // https://github.com/google/certtostore
 
-
 // Copyright 2017 Google Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -42,19 +41,19 @@ import (
 
 const (
 	// wincrypt.h constants
-	acquireCached           = 0x1                                               // CRYPT_ACQUIRE_CACHE_FLAG
-	acquireSilent           = 0x40                                              // CRYPT_ACQUIRE_SILENT_FLAG
-	acquireOnlyNCryptKey    = 0x40000                                           // CRYPT_ACQUIRE_ONLY_NCRYPT_KEY_FLAG
-	encodingX509ASN         = 1                                                 // X509_ASN_ENCODING
-	encodingPKCS7           = 65536                                             // PKCS_7_ASN_ENCODING
-	certStoreProvSystem     = 10                                                // CERT_STORE_PROV_SYSTEM
-	certStoreLocalMachine   = uint32(certStoreLocalMachineID << compareShift)   // CERT_SYSTEM_STORE_LOCAL_MACHINE
-	certStoreLocalMachineID = 2                                                 // CERT_SYSTEM_STORE_LOCAL_MACHINE_ID
-	compareNameStrW         = 8                                                 // CERT_COMPARE_NAME_STR_A
-	compareShift            = 16                                                // CERT_COMPARE_SHIFT
-	ncryptKeySpec           = 0xFFFFFFFF                                        // CERT_NCRYPT_KEY_SPEC
-	infoSubjectFlag			= 7                                              //CERT_INFO_SUBJECT_FLAG
-	findSubjectStr			= compareNameStrW<<compareShift | infoSubjectFlag // CERT_FIND_SUBJECT_NAME
+	acquireCached           = 0x1                                             // CRYPT_ACQUIRE_CACHE_FLAG
+	acquireSilent           = 0x40                                            // CRYPT_ACQUIRE_SILENT_FLAG
+	acquireOnlyNCryptKey    = 0x40000                                         // CRYPT_ACQUIRE_ONLY_NCRYPT_KEY_FLAG
+	encodingX509ASN         = 1                                               // X509_ASN_ENCODING
+	encodingPKCS7           = 65536                                           // PKCS_7_ASN_ENCODING
+	certStoreProvSystem     = 10                                              // CERT_STORE_PROV_SYSTEM
+	certStoreLocalMachine   = uint32(certStoreLocalMachineID << compareShift) // CERT_SYSTEM_STORE_LOCAL_MACHINE
+	certStoreLocalMachineID = 2                                               // CERT_SYSTEM_STORE_LOCAL_MACHINE_ID
+	compareNameStrW         = 8                                               // CERT_COMPARE_NAME_STR_A
+	compareShift            = 16                                              // CERT_COMPARE_SHIFT
+	ncryptKeySpec           = 0xFFFFFFFF                                      // CERT_NCRYPT_KEY_SPEC
+	infoSubjectFlag         = 7                                               // CERT_INFO_SUBJECT_FLAG
+	findSubjectStr          = compareNameStrW<<compareShift | infoSubjectFlag // CERT_FIND_SUBJECT_NAME
 
 	// Legacy CryptoAPI flags
 	bCryptPadPKCS1 uintptr = 0x2
@@ -63,7 +62,7 @@ const (
 	rsa1Magic = 0x31415352 // "RSA1" BCRYPT_RSAPUBLIC_MAGIC
 
 	// key creation flag.
-	nCryptMachineKey   = 0x20 // NCRYPT_MACHINE_KEY_FLAG
+	nCryptMachineKey = 0x20 // NCRYPT_MACHINE_KEY_FLAG
 
 	// winerror.h constants
 	cryptENotFound = 0x80092004 // CRYPT_E_NOT_FOUND
@@ -74,7 +73,6 @@ const (
 	ProviderMSSoftware = "Microsoft Software Key Storage Provider"
 	// ProviderMSLegacy represents the CryptoAPI compatible Enhanced Cryptographic Provider
 	ProviderMSLegacy = "Microsoft Enhanced Cryptographic Provider v1.0"
-
 )
 
 var (
@@ -208,7 +206,7 @@ func OpenWinCertStore(provider, container string, issuers, intermediateIssuers [
 	}
 
 	var certStore windows.Handle
-	if(openStoreWithHandle){
+	if openStoreWithHandle {
 		// Open a handle to the system cert store
 		certStore, err = windows.CertOpenStore(
 			certStoreProvSystem,
@@ -227,7 +225,7 @@ func OpenWinCertStore(provider, container string, issuers, intermediateIssuers [
 		issuers:             issuers,
 		intermediateIssuers: intermediateIssuers,
 		container:           container,
-		CStore: certStore,
+		CStore:              certStore,
 	}
 
 	return wcs, nil
@@ -243,7 +241,6 @@ func certContextToX509(ctx *windows.CertContext) (*x509.Certificate, error) {
 	return x509.ParseCertificate(der)
 }
 
-
 // cert is a function to lookup certificates based on a subject name.
 func (w *WinCertStore) CertBySubjectName(subjectName string) (*x509.Certificate, *windows.CertContext, error) {
 	var certContext *windows.CertContext
@@ -257,12 +254,12 @@ func (w *WinCertStore) CertBySubjectName(subjectName string) (*x509.Certificate,
 	certContext, err = findCert(w.CStore, encodingX509ASN|encodingPKCS7, 0, findSubjectStr, searchString, certContext)
 
 	if err != nil {
-		return nil,nil,err
+		return nil, nil, err
 	}
 
 	cert, err = certContextToX509(certContext)
 	if err != nil {
-		return nil,nil,err
+		return nil, nil, err
 	}
 
 	if cert == nil {
