@@ -62,14 +62,14 @@ func GetTlsConfig(tlsSettings localtls.TlsSettings) (*tls.Config, error) {
 		PrivateKey:  privateKey,
 		Leaf:        leafCertificate,
 	}
-	TlsConfig := &tls.Config{
+	tlsConfig := &tls.Config{
 		MaxVersion: tls.VersionTLS12,
 		MinVersion: tls.VersionTLS12,
 		Certificates: []tls.Certificate{
 			tlsCert,
 		},
 	}
-	return TlsConfig, nil
+	return tlsConfig, nil
 }
 
 // Start creates the listener socket and starts the HTTPS server.
@@ -85,12 +85,12 @@ func (listener *Listener) StartTLS(errChan chan error, tlsSettings localtls.TlsS
 	}
 
 	// listen on a seperate endpoint for secure tls connections
-	listener.securelistener, err = net.Listen(listener.protocol, tlsSettings.TlsEndpoint)
+	listener.securelistener, err = net.Listen(listener.protocol, tlsSettings.TLSEndpoint)
 	if err != nil {
 		log.Printf("[Listener] Failed to listen on TlsEndpoint: %+v", err)
 		return err
 	}
-	log.Printf("[Listener] Started listening on tls endpoint %s.", tlsSettings.TlsEndpoint)
+	log.Printf("[Listener] Started listening on tls endpoint %s.", tlsSettings.TLSEndpoint)
 
 	// Launch goroutine for servicing https requests
 	go func() {

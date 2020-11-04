@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	CertLabel = "CERTIFICATE"
+	CertLabel       = "CERTIFICATE"
 	PrivateKeyLabel = "PRIVATE KEY"
 )
 
@@ -27,9 +27,9 @@ func (fcert *filetlsCertificateRetriever) GetCertificate() (*x509.Certificate, e
 		if block.Type == CertLabel {
 			cert, err := x509.ParseCertificate(block.Bytes)
 			if err != nil {
-				return nil, fmt.Errorf("Failed to parse certificate at location %s with error %+v",fcert.settings.TlsCertificateFilePath, err)
+				return nil, fmt.Errorf("Failed to parse certificate at location %s with error %+v", fcert.settings.TLSCertificatePath, err)
 			}
-			if cert.IsCA != true {
+			if !cert.IsCA {
 				return cert, nil
 			}
 		}
@@ -48,18 +48,18 @@ func (fcert *filetlsCertificateRetriever) GetPrivateKey() (crypto.PrivateKey, er
 			return pk, nil
 		}
 	}
-	return nil, fmt.Errorf("No private key found in certificate bundle located at %s", fcert.settings.TlsCertificateFilePath)
+	return nil, fmt.Errorf("No private key found in certificate bundle located at %s", fcert.settings.TLSCertificatePath)
 }
 
 // readPemFile reads a pfx certificate converts it to PEM
 func (fcert *filetlsCertificateRetriever) readPemFile() error {
-	content, err := ioutil.ReadFile(fcert.settings.TlsCertificateFilePath)
+	content, err := ioutil.ReadFile(fcert.settings.TLSCertificatePath)
 	if err != nil {
-		return fmt.Errorf("Error reading file from path %s with error: %+v ",fcert.settings.TlsCertificateFilePath, err)
+		return fmt.Errorf("Error reading file from path %s with error: %+v ", fcert.settings.TLSCertificatePath, err)
 	}
 	pemBlock, err := pkcs12.ToPEM(content, "")
 	if err != nil {
-		return fmt.Errorf("Could not convert pfx located at %s to PEM format", fcert.settings.TlsCertificateFilePath)
+		return fmt.Errorf("Could not convert pfx located at %s to PEM format", fcert.settings.TLSCertificatePath)
 	}
 	fcert.pemBlock = pemBlock
 	return nil

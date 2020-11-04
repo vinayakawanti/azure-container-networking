@@ -68,7 +68,7 @@ func (service *Service) Initialize(config *common.ServiceConfig) error {
 		if err != nil {
 			return err
 		}
-		if config.TlsSettings.TlsEndpoint != "" {
+		if config.TlsSettings.TLSEndpoint != "" {
 			// Start the listener and HTTP and HTTPS server.
 			if err = listener.StartTLS(config.ErrChan, config.TlsSettings); err != nil {
 				return err

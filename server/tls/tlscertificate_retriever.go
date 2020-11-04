@@ -4,13 +4,13 @@ package tls
 
 // TlsCertificateSettins - Details related to the TLS certificate.
 type TlsSettings struct {
-	TlsCertificateSubjectName string
-	TlsCertificateFilePath    string
-	TlsEndpoint				  string
+	TLSSubjectName     string
+	TLSCertificatePath string
+	TLSEndpoint        string
 }
 
 func GetTlsCertificateRetriever(settings TlsSettings) (TlsCertificateRetriever, error) {
-	if settings.TlsCertificateFilePath != ""{
+	if settings.TLSCertificatePath != "" {
 		return NewFileTlsCertificateRetriever(settings)
 	}
 	// if Windows build flag is set, the below will return a windows implementation

@@ -6,7 +6,7 @@ import (
 	"crypto"
 	"crypto/x509"
 	"fmt"
-	certtostore "github.com/Azure/azure-container-networking/server/tls/customCertToStore"
+	certtostore "github.com/Azure/azure-container-networking/server/tls/customcerttostore"
 	"golang.org/x/sys/windows"
 )
 
@@ -20,12 +20,12 @@ type windowsTlsCertificateRetriever struct {
 // it depends on the TlsCertificateSubjectName being set
 // in the server settings to retrieve the cert
 func (wtls *windowsTlsCertificateRetriever) GetCertificate() (*x509.Certificate, error) {
-	if wtls.settings.TlsCertificateSubjectName == "" {
+	if wtls.settings.TLSSubjectName == "" {
 		return nil, fmt.Errorf("Certificate subject name is empty in the settings")
 	}
-	cert, certContext, err := wtls.certStore.CertBySubjectName(wtls.settings.TlsCertificateSubjectName)
+	cert, certContext, err := wtls.certStore.CertBySubjectName(wtls.settings.TLSSubjectName)
 	if err != nil {
-		return nil, fmt.Errorf("Retrieving certificate with subject name %s from cert store returned error %+v",wtls.settings.TlsCertificateSubjectName, err)
+		return nil, fmt.Errorf("Retrieving certificate with subject name %s from cert store returned error %+v",wtls.settings.TLSSubjectName, err)
 	}
 	if cert == nil {
 		return nil, fmt.Errorf("Call to cert store succeeded but gave a empty certificate")
@@ -52,7 +52,6 @@ func (wtls *windowsTlsCertificateRetriever) GetPrivateKey() (crypto.PrivateKey, 
 }
 
 // Open cert store opens the cert store
-// its the responsbility of the caller to close the cert store handle
 func (wtls *windowsTlsCertificateRetriever) openCertStore() error {
 	certStore, err := certtostore.OpenWinCertStore(certtostore.ProviderMSSoftware, "0", nil, nil, false, true)
 	if err != nil {

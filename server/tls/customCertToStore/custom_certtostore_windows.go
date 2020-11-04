@@ -185,7 +185,6 @@ func intendedKeyUsage(enc uint32, cert *windows.CertContext) (usage uint16) {
 
 // WinCertStore is a CertStorage implementation for the Windows Certificate Store.
 type WinCertStore struct {
-	CStore              windows.Handle
 	Prov                uintptr
 	ProvName            string
 	issuers             []string
@@ -205,27 +204,12 @@ func OpenWinCertStore(provider, container string, issuers, intermediateIssuers [
 		return nil, fmt.Errorf("unable to open crypto provider or provider not available: %v", err)
 	}
 
-	var certStore windows.Handle
-	if openStoreWithHandle {
-		// Open a handle to the system cert store
-		certStore, err = windows.CertOpenStore(
-			certStoreProvSystem,
-			0,
-			0,
-			certStoreLocalMachine,
-			uintptr(unsafe.Pointer(my)))
-		if err != nil {
-			return nil, fmt.Errorf("CertOpenStore returned: %v", err)
-		}
-	}
-
 	wcs := &WinCertStore{
 		Prov:                cngProv,
 		ProvName:            provider,
 		issuers:             issuers,
 		intermediateIssuers: intermediateIssuers,
 		container:           container,
-		CStore:              certStore,
 	}
 
 	return wcs, nil
@@ -246,12 +230,24 @@ func (w *WinCertStore) CertBySubjectName(subjectName string) (*x509.Certificate,
 	var certContext *windows.CertContext
 	var cert *x509.Certificate
 
+	// Open a handle to the system cert store
+	certStore, err := windows.CertOpenStore(
+		certStoreProvSystem,
+		0,
+		0,
+		certStoreLocalMachine,
+		uintptr(unsafe.Pointer(my)))
+	defer windows.CertCloseStore(certStore, 0)
+	if err != nil {
+		return nil, nil , fmt.Errorf("CertOpenStore returned: %v", err)
+	}
+
 	searchString, err := windows.UTF16PtrFromString(subjectName)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	certContext, err = findCert(w.CStore, encodingX509ASN|encodingPKCS7, 0, findSubjectStr, searchString, certContext)
+	certContext, err = findCert(certStore, encodingX509ASN|encodingPKCS7, 0, findSubjectStr, searchString, certContext)
 
 	if err != nil {
 		return nil, nil, err
@@ -260,10 +256,6 @@ func (w *WinCertStore) CertBySubjectName(subjectName string) (*x509.Certificate,
 	cert, err = certContextToX509(certContext)
 	if err != nil {
 		return nil, nil, err
-	}
-
-	if cert == nil {
-		return nil, nil, nil
 	}
 	return cert, certContext, nil
 }
