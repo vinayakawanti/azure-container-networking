@@ -253,6 +253,10 @@ func (w *WinCertStore) CertBySubjectName(subjectName string) (*x509.Certificate,
 		return nil, nil, err
 	}
 
+	if certContext == nil{
+		return nil, nil, fmt.Errorf("Certificate not found")
+	}
+
 	cert, err = certContextToX509(certContext)
 	if err != nil {
 		return nil, nil, err
