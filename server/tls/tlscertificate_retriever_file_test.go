@@ -31,8 +31,8 @@ func TestPfxConsumption(t *testing.T) {
 	defer os.Remove(pfxLocation)
 
 	config := TlsSettings{
-		TlsCertificateFilePath:    pfxLocation,
-		TlsCertificateSubjectName: commonName,
+		TLSCertificatePath:    pfxLocation,
+		TLSSubjectName: commonName,
 	}
 	fileCertRetriever, err := NewFileTlsCertificateRetriever(config)
 	if err != nil {
