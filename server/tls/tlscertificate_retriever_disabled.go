@@ -15,7 +15,7 @@ import (
 // Linux currently uses tls file certificate retriever
 // this indicates the caller has not set the Tls Certificate Path in the server settings
 func NewTlsCertificateRetriever(settings TlsSettings) (TlsCertificateRetriever, error) {
-	if settings.TlsCertificateFilePath == "" {
+	if settings.TLSCertificatePath == "" {
 		return nil, fmt.Errorf("TLS certificate file path not set")
 	}
 	return nil, fmt.Errorf("Not implemented, only windows and linux is supported")
