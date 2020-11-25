@@ -11,11 +11,8 @@ type TlsSettings struct {
 }
 
 func GetTlsCertificateRetriever(settings TlsSettings) (TlsCertificateRetriever, error) {
-	if settings.TLSCertificatePath != "" {
-		return NewFileTlsCertificateRetriever(settings)
-	}
 	// if Windows build flag is set, the below will return a windows implementation
-	// otherwise it will return a error as caller should of already received a
+	// if Linux build flag is set, the below will return a Linux implementation
 	// tls certificate parsed from disk.
 	return NewTlsCertificateRetriever(settings)
 }
