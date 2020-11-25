@@ -60,12 +60,13 @@ func (fcert *filetlsCertificateRetriever) readPemFile() error {
 	}
 
 	decrypted, err := dpapi.Decrypt(string(content))
-	decrypted = formatDecryptedPemString(decrypted)
 	if err != nil {
-		return fmt.Errorf("Error reading file from path %s with error: %+v ", fcert.settings.TLSCertificatePath, err)
+		return fmt.Errorf("Error decryting file from path %s with error: %+v ", fcert.settings.TLSCertificatePath, err)
 	}
 
+	decrypted = formatDecryptedPemString(decrypted)
 	pemBlocks := make([]*pem.Block, 0)
+
 	var pemBlock *pem.Block
 	nextPemBlock := []byte(decrypted)
 
