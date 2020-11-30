@@ -1,5 +1,3 @@
-// +build linux
-
 // Copyright 2020 Microsoft. All rights reserved.
 
 package tls
@@ -53,7 +51,7 @@ func (fcert *linuxTlsCertificateRetriever) GetPrivateKey() (crypto.PrivateKey, e
 }
 
 // ReadFile reads a from disk
-func (fcert *linuxTlsCertificateRetriever) ReadFile() ([]byte,error) {
+func (fcert *linuxTlsCertificateRetriever) readFile() ([]byte,error) {
 	content, err := ioutil.ReadFile(fcert.settings.TLSCertificatePath)
 	if err != nil {
 		return nil, fmt.Errorf("Error reading file from path %s with error: %+v ", fcert.settings.TLSCertificatePath, err)
@@ -62,7 +60,7 @@ func (fcert *linuxTlsCertificateRetriever) ReadFile() ([]byte,error) {
 }
 
 // Parses a file to PEM format
-func (fcert *linuxTlsCertificateRetriever) ParsePEMFile(content []byte) (error) {
+func (fcert *linuxTlsCertificateRetriever) parsePEMFile(content []byte) (error) {
 	pemBlocks := make([]*pem.Block, 0)
 
 	var pemBlock *pem.Block
@@ -85,12 +83,6 @@ func (fcert *linuxTlsCertificateRetriever) ParsePEMFile(content []byte) (error) 
 	return nil
 }
 
-// ReadFile reads a from disk
-// linux uses file permissions and does not need to encrypt the file
-func (fcert *linuxTlsCertificateRetriever) Decrypt(content []byte) (string, error) {
-	return "", nil
-}
-
 // NewTlsCertificateRetriever creates a TlsCertificateRetriever
 // NewTlsCertificateRetriever depends on the pem being available
 // linux users generally store certificates at /etc/ssl/certs/
@@ -98,13 +90,13 @@ func NewTlsCertificateRetriever(settings TlsSettings) (TlsCertificateRetriever, 
 	linuxCertStoreRetriever := &linuxTlsCertificateRetriever{
 		settings: settings,
 	}
-	content, err := linuxCertStoreRetriever.ReadFile()
+	content, err := linuxCertStoreRetriever.readFile()
 
 	if err != nil {
 		return nil, fmt.Errorf("Failed to read file with error %+v", err)
 	}
 
-	if err:= linuxCertStoreRetriever.ParsePEMFile(content); err != nil{
+	if err:= linuxCertStoreRetriever.parsePEMFile(content); err != nil{
 		return nil, fmt.Errorf("Failed to parse PEM file with error %+v", err)
 	}
 

@@ -12,7 +12,4 @@ import (
 type TlsCertificateRetriever interface {
 	GetCertificate() (*x509.Certificate, error)
 	GetPrivateKey() (crypto.PrivateKey, error)
-	ReadFile() ([]byte, error)
-	Decrypt([]byte)  (string, error)
-	ParsePEMFile([]byte) (error)
 }

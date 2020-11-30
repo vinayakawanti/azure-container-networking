@@ -1,5 +1,3 @@
-// +build windows
-
 // Copyright 2020 Microsoft. All rights reserved.
 
 package tls
@@ -55,7 +53,7 @@ func (wtls *windowsTlsCertificateRetriever) GetPrivateKey() (crypto.PrivateKey, 
 }
 
 // ReadFile reads a from disk
-func (wtls *windowsTlsCertificateRetriever) ReadFile() ([]byte,error) {
+func (wtls *windowsTlsCertificateRetriever) readFile() ([]byte,error) {
 	content, err := ioutil.ReadFile(wtls.settings.TLSCertificatePath)
 	if err != nil {
 		return nil, fmt.Errorf("Error reading file from path %s with error: %+v ", wtls.settings.TLSCertificatePath, err)
@@ -64,7 +62,7 @@ func (wtls *windowsTlsCertificateRetriever) ReadFile() ([]byte,error) {
 }
 
 // ParsePEMFile Parses a file to PEM format
-func (fcert *windowsTlsCertificateRetriever) ParsePEMFile(content []byte) (error) {
+func (fcert *windowsTlsCertificateRetriever) parsePEMFile(content []byte) (error) {
 	pemBlocks := make([]*pem.Block, 0)
 
 	var pemBlock *pem.Block
@@ -88,7 +86,7 @@ func (fcert *windowsTlsCertificateRetriever) ParsePEMFile(content []byte) (error
 }
 
 // Decrypt is a no-op for linux implementation
-func (wtls *windowsTlsCertificateRetriever) Decrypt(content []byte) (string, error) {
+func (wtls *windowsTlsCertificateRetriever) decrypt(content []byte) (string, error) {
 	decrypted, err := dpapi.Decrypt(string(content))
 	if err != nil {
 		return "",fmt.Errorf("Error decrypting file from path %s with error: %+v ", wtls.settings.TLSCertificatePath, err)
@@ -120,19 +118,19 @@ func NewTlsCertificateRetriever(settings TlsSettings) (TlsCertificateRetriever, 
 		settings: settings,
 	}
 
-	content, err := windowsCertStoreRetriever.ReadFile()
+	content, err := windowsCertStoreRetriever.readFile()
 
 	if err != nil {
 		return nil, fmt.Errorf("Failed to read file with error %+v", err)
 	}
 
-	decrypted, err := windowsCertStoreRetriever.Decrypt(content)
+	decrypted, err := windowsCertStoreRetriever.decrypt(content)
 
 	if err != nil {
 		return nil, fmt.Errorf("Failed to decrypt file with error %+v", err)
 	}
 
-	if err:= windowsCertStoreRetriever.ParsePEMFile([]byte(decrypted)); err != nil{
+	if err:= windowsCertStoreRetriever.parsePEMFile([]byte(decrypted)); err != nil{
 		return nil, fmt.Errorf("Failed to parse PEM file with error %+v", err)
 	}
 
