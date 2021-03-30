@@ -304,7 +304,7 @@ publish-azure-vnet-plugin-image:
 
 # Build the Azure NPM image.
 .PHONY: azure-npm-image
-azure-npm-image: azure-npm acncli
+azure-npm-image: azure-npm tools
 ifeq ($(GOOS),linux)
 	docker build \
 	--no-cache \
