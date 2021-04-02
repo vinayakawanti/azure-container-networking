@@ -35,7 +35,13 @@ stages:
           - checkout: self
 
           - bash: |
-              go version
+              cat /etc/profile
+              echo $PATH
+              whoami
+              pwd
+              ls -lah 
+              cat ~/.bashrc
+              /usr/local/go/bin/go version
               go env
               mkdir -p '$(GOBIN)'
               mkdir -p '$(GOPATH)/pkg'
