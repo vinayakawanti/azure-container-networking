@@ -25,13 +25,6 @@ stages:
           modulePath: "$(GOPATH)/src/github.com/Azure/azure-container-networking" # $(build.repository.name)' # Path to the module's code
 
         steps:
-          - bash: |
-              echo $UID
-              sudo rm -rf $(System.DefaultWorkingDirectory)/*
-              sudo rm /run/docker/plugins/test.sock || true
-              sudo ip link del dev dummy || true
-            displayName: "Set up OS environment"
-
           - checkout: self
 
           - bash: |
@@ -79,7 +72,7 @@ stages:
 
           - script: |
               export GOOS=windows
-              make all-binaries VERSION=$(EnvironmentalVariables.Tag)
+              sudo make all-binaries VERSION=$(EnvironmentalVariables.Tag)
             workingDirectory: "$(modulePath)"
             name: "BuildWindows"
             displayName: "Build Windows"
