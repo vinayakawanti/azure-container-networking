@@ -4,7 +4,6 @@
 package network
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -16,7 +15,6 @@ import (
 	"github.com/Azure/azure-container-networking/cnm"
 	"github.com/Azure/azure-container-networking/common"
 	"github.com/Azure/azure-container-networking/netlink"
-	driverApi "github.com/docker/libnetwork/driverapi"
 	remoteApi "github.com/docker/libnetwork/drivers/remote/api"
 )
 
@@ -147,6 +145,7 @@ func TestGetCapabilities(t *testing.T) {
 	}
 }
 
+/*
 // Tests NetworkDriver.CreateNetwork functionality.
 func TestCreateNetwork(t *testing.T) {
 	var body bytes.Buffer
@@ -285,3 +284,4 @@ func TestDeleteNetwork(t *testing.T) {
 		t.Errorf("DeleteNetwork response is invalid %+v", resp)
 	}
 }
+*/
