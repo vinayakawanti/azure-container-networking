@@ -52,6 +52,7 @@ stages:
               echo "##vso[task.setvariable variable=CommitHash;isOutput=true]$(git rev-parse HEAD)"
               echo "##vso[task.setvariable variable=Tag;isOutput=true]$(git describe --tags --always --dirty)"
               echo "##vso[task.setvariable variable=ImageTag;isOutput=true]$(git describe --tags --always --dirty)-test"
+              sudo chown -R $(whoami):$(whoami) .
             workingDirectory: "$(modulePath)"
             name: "EnvironmentalVariables"
             displayName: "Set environmental variables"
@@ -70,13 +71,13 @@ stages:
             displayName: "Install Go dependencies"
 
           - script: |
-              sudo GOOS=windows make all-binaries VERSION=$(EnvironmentalVariables.Tag)
+              GOOS=windows make all-binaries VERSION=$(EnvironmentalVariables.Tag)
             workingDirectory: "$(modulePath)"
             name: "BuildWindows"
             displayName: "Build Windows"
 
           - script: |
-              sudo GOOS=linux make all-binaries VERSION=$(EnvironmentalVariables.Tag)
+              GOOS=linux make all-binaries VERSION=$(EnvironmentalVariables.Tag)
             workingDirectory: "$(modulePath)"
             name: "BuildLinux"
             displayName: "Build Linux"
