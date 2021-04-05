@@ -4,6 +4,7 @@
 package network
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -15,6 +16,7 @@ import (
 	"github.com/Azure/azure-container-networking/cnm"
 	"github.com/Azure/azure-container-networking/common"
 	"github.com/Azure/azure-container-networking/netlink"
+	driverApi "github.com/docker/libnetwork/driverapi"
 	remoteApi "github.com/docker/libnetwork/drivers/remote/api"
 )
 
@@ -145,7 +147,6 @@ func TestGetCapabilities(t *testing.T) {
 	}
 }
 
-/*
 // Tests NetworkDriver.CreateNetwork functionality.
 func TestCreateNetwork(t *testing.T) {
 	var body bytes.Buffer
@@ -175,7 +176,7 @@ func TestCreateNetwork(t *testing.T) {
 	err = decodeResponse(w, &resp)
 
 	if err != nil || resp.Response.Err != "" {
-		t.Errorf("CreateNetwork response is invalid %+v", resp)
+		t.Errorf("CreateNetwork response is invalid %+v, received err %v", resp, err)
 	}
 }
 
@@ -203,7 +204,7 @@ func TestCreateEndpoint(t *testing.T) {
 	err = decodeResponse(w, &resp)
 
 	if err != nil || resp.Response.Err != "" {
-		t.Errorf("CreateEndpoint response is invalid %+v", resp)
+		t.Errorf("CreateEndpoint response is invalid %+v, received err %v", resp, err)
 	}
 }
 
@@ -229,7 +230,7 @@ func TestEndpointOperInfo(t *testing.T) {
 
 	err = decodeResponse(w, &resp)
 	if err != nil || resp.Err != "" {
-		t.Errorf("EndpointOperInfo response is invalid %+v", resp)
+		t.Errorf("EndpointOperInfo response is invalid %+v, received err %v", resp, err)
 	}
 }
 
@@ -255,7 +256,7 @@ func TestDeleteEndpoint(t *testing.T) {
 	err = decodeResponse(w, &resp)
 
 	if err != nil || resp.Response.Err != "" {
-		t.Errorf("DeleteEndpoint response is invalid %+v", resp)
+		t.Errorf("DeleteEndpoint response is invalid %+v, received err %v", resp, err)
 	}
 }
 
@@ -281,7 +282,6 @@ func TestDeleteNetwork(t *testing.T) {
 	err = decodeResponse(w, &resp)
 
 	if err != nil || resp.Err != "" {
-		t.Errorf("DeleteNetwork response is invalid %+v", resp)
+		t.Errorf("DeleteNetwork response is invalid %+v, received err %v", resp, err)
 	}
 }
-*/
