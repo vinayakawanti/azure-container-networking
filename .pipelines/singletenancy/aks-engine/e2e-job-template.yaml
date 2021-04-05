@@ -16,7 +16,7 @@ stages:
         displayName: Singletenancy AKS Engine Suite - (${{ parameters.name }})
         timeoutInMinutes: 120
         pool:
-          name: Networking-ContainerNetworking
+          name: $(BUILD_POOL_NAME_DEFAULT)
           demands: 
           - agent.os -equals Linux
           - Role -equals Build

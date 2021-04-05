@@ -15,7 +15,7 @@ stages:
       - job: unit_tests
         displayName: CNI, NPM, CNS, CNM
         pool:
-          name: "$(POOL_NAME)"
+          name: "$(BUILD_POOL_NAME_DEFAULT)"
 
         # Go setup for the vmImage:
         # https://github.com/Microsoft/azure-pipelines-image-generation/blob/master/images/linux/scripts/installers/go.sh
