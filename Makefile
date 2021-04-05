@@ -456,7 +456,7 @@ PRETTYGOTEST := $(shell command -v gotest 2> /dev/null)
 # run all tests
 .PHONY: test-all
 test-all:
-	go test -coverpkg=./... -v -race -covermode atomic -coverprofile=coverage.out ./...
+	go test -coverpkg=./... -v -race -covermode atomic -failfast -coverprofile=coverage.out ./...
 
 # run all tests
 .PHONY: test-integration
