@@ -243,7 +243,7 @@ stages:
       - job: delete_remote_artifacts
         displayName: Delete remote artifacts
         pool:
-          name: Networking-ContainerNetworking
+          name: $(BUILD_POOL_NAME_DEFAULT)
           demands: agent.os -equals Linux
         container:
           image: "$(BUILD_IMAGE)"
