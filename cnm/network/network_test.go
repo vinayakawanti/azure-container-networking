@@ -197,6 +197,10 @@ func TestCreateEndpoint(t *testing.T) {
 		Interface:  &remoteApi.EndpointInterface{Address: anySubnet},
 	}
 
+	info.Options = make(map[string]interface{})
+	info.Options["com.docker.network.generic"] = make(map[string]interface{})
+	info.Options["com.docker.network.generic"].(map[string]interface{})[modeOption] = "transparent"
+
 	json.NewEncoder(&body).Encode(info)
 
 	req, err := http.NewRequest(http.MethodGet, createEndpointPath, &body)
