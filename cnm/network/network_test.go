@@ -218,7 +218,7 @@ func TestCreateEndpoint(t *testing.T) {
 		t.Errorf("CreateEndpoint response is invalid %+v, received err %v", resp, err)
 	}
 }
-*/
+
 
 // Tests NetworkDriver.EndpointOperInfo functionality.
 func TestEndpointOperInfo(t *testing.T) {
@@ -245,7 +245,7 @@ func TestEndpointOperInfo(t *testing.T) {
 		t.Errorf("EndpointOperInfo response is invalid %+v, received err %v", resp, err)
 	}
 }
-
+*/
 func TestDeleteEndpoint(t *testing.T) {
 	var body bytes.Buffer
 	var resp remoteApi.DeleteEndpointResponse
