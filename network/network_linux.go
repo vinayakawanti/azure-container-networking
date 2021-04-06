@@ -56,9 +56,6 @@ func (nm *networkManager) newNetworkImpl(nwInfo *NetworkInfo, extIf *externalInt
 	case opModeTunnel:
 		handleCommonOptions(extIf.Name, nwInfo)
 		fallthrough
-	case opModeTransparent:
-		handleCommonOptions(extIf.Name, nwInfo)
-		break
 	case opModeBridge:
 		log.Printf("create bridge")
 		if err := nm.connectExternalInterface(extIf, nwInfo); err != nil {
@@ -69,6 +66,9 @@ func (nm *networkManager) newNetworkImpl(nwInfo *NetworkInfo, extIf *externalInt
 			vlanid, _ = strconv.Atoi(opt[VlanIDKey].(string))
 		}
 		handleCommonOptions(extIf.BridgeName, nwInfo)
+	case opModeTransparent:
+		handleCommonOptions(extIf.Name, nwInfo)
+		break
 	default:
 		return nil, errNetworkModeInvalid
 	}
