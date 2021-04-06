@@ -186,6 +186,7 @@ func TestCreateNetwork(t *testing.T) {
 	}
 }
 
+/*
 // Tests NetworkDriver.CreateEndpoint functionality.
 func TestCreateEndpoint(t *testing.T) {
 	var body bytes.Buffer
@@ -217,6 +218,7 @@ func TestCreateEndpoint(t *testing.T) {
 		t.Errorf("CreateEndpoint response is invalid %+v, received err %v", resp, err)
 	}
 }
+*/
 
 // Tests NetworkDriver.EndpointOperInfo functionality.
 func TestEndpointOperInfo(t *testing.T) {
