@@ -112,6 +112,8 @@ func (nm *networkManager) deleteNetworkImpl(nw *network) error {
 
 	if nw.VlanId != 0 {
 		networkClient = NewOVSClient(nw.extIf.BridgeName, nw.extIf.Name)
+	} else if nw.Mode == opModeTransparent {
+		return nil
 	} else {
 		networkClient = NewLinuxBridgeClient(nw.extIf.BridgeName, nw.extIf.Name, NetworkInfo{})
 	}

@@ -227,16 +227,20 @@ func (plugin *netPlugin) createEndpoint(w http.ResponseWriter, r *http.Request) 
 		}
 		ipv4Address.IP = ip
 	}
-
-	epInfo := network.EndpointInfo{
-		Id:              req.EndpointID,
-		IPAddresses:     []net.IPNet{*ipv4Address},
-		SkipHotAttachEp: true, // Skip hot attach endpoint as it's done in Join
+	var epInfo *network.EndpointInfo
+	if req.EndpointInfo == nil {
+		epInfo = &network.EndpointInfo{
+			Id:              req.EndpointID,
+			IPAddresses:     []net.IPNet{*ipv4Address},
+			SkipHotAttachEp: true, // Skip hot attach endpoint as it's done in Join
+		}
+	} else {
+		epInfo = req.EndpointInfo
 	}
 
 	epInfo.Data = make(map[string]interface{})
 
-	err = plugin.nm.CreateEndpoint(req.NetworkID, &epInfo)
+	err = plugin.nm.CreateEndpoint(req.NetworkID, epInfo)
 	if err != nil {
 		plugin.SendErrorResponse(w, err)
 		return

@@ -11,11 +11,14 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"os/exec"
 	"testing"
 
 	"github.com/Azure/azure-container-networking/cnm"
 	"github.com/Azure/azure-container-networking/common"
+	"github.com/Azure/azure-container-networking/log"
 	"github.com/Azure/azure-container-networking/netlink"
+	"github.com/Azure/azure-container-networking/network"
 	driverApi "github.com/docker/libnetwork/driverapi"
 	remoteApi "github.com/docker/libnetwork/drivers/remote/api"
 )
@@ -27,6 +30,7 @@ var anyInterface = "dummy"
 var anySubnet = "192.168.1.0/24"
 var ipnet = net.IPNet{IP: net.ParseIP("192.168.1.0"), Mask: net.IPv4Mask(255, 255, 255, 0)}
 var networkID = "N1"
+var netns = "22212"
 
 // endpoint ID must contain 7 characters
 var endpointID = "E1-xxxx"
@@ -147,8 +151,37 @@ func TestGetCapabilities(t *testing.T) {
 	}
 }
 
+func TestCNM(t *testing.T) {
+	cmd := exec.Command("ip", "netns", "create", netns)
+	_, err := cmd.Output()
+
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+
+	log.Printf("###CreateNetwork#####################################################################################")
+	createNetworkT(t)
+	log.Printf("###CreateEndpoint####################################################################################")
+	createEndpointT(t)
+	log.Printf("###EndpointOperInfo#####################################################################################")
+	endpointOperInfoT(t)
+	log.Printf("###DeleteEndpoint#####################################################################################")
+	deleteEndpointT(t)
+	log.Printf("###DeleteNetwork#####################################################################################")
+	//deleteNetworkT(t)
+
+	cmd = exec.Command("ip", "netns", "delete", netns)
+	_, err = cmd.Output()
+
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+}
+
 // Tests NetworkDriver.CreateNetwork functionality.
-func TestCreateNetwork(t *testing.T) {
+func createNetworkT(t *testing.T) {
 	var body bytes.Buffer
 	var resp remoteApi.CreateNetworkResponse
 
@@ -162,6 +195,9 @@ func TestCreateNetwork(t *testing.T) {
 			},
 		},
 	}
+	info.Options = make(map[string]interface{})
+	info.Options["com.docker.network.generic"] = make(map[string]interface{})
+	info.Options["com.docker.network.generic"].(map[string]interface{})[modeOption] = "transparent"
 
 	info.Options = make(map[string]interface{})
 	info.Options["com.docker.network.generic"] = make(map[string]interface{})
@@ -186,16 +222,58 @@ func TestCreateNetwork(t *testing.T) {
 	}
 }
 
-/*
 // Tests NetworkDriver.CreateEndpoint functionality.
-func TestCreateEndpoint(t *testing.T) {
+func createEndpointT(t *testing.T) {
 	var body bytes.Buffer
 	var resp remoteApi.CreateEndpointResponse
 
+	dnInfo := network.DNSInfo{
+		Servers: []string{"168.63.129.16"},
+	}
+
+	_, ipnet, err := net.ParseCIDR("0.0.0.0/0")
+	if err != nil {
+		log.Printf("%v", err)
+	}
+
+	ip := net.ParseIP("192.168.1.1")
+
+	_, ipv4Address, _ := net.ParseCIDR(anySubnet)
+
+	epInfo := &network.EndpointInfo{
+		Id:                       endpointID,
+		IPAddresses:              []net.IPNet{*ipv4Address},
+		SkipHotAttachEp:          true, // Skip hot attach endpoint as it's done in Join
+		ContainerID:              "2f3aeb850f2b36e94f9df86eb0c671d503dd30181a9ab9ed44de501acfc59ac2",
+		NetNsPath:                "/var/run/netns/22212",
+		IfName:                   "eth0",
+		IfIndex:                  0,
+		DNS:                      dnInfo,
+		IPsToRouteViaHost:        []string{"169.254.20.10"},
+		EnableSnatOnHost:         false,
+		EnableInfraVnet:          false,
+		EnableMultiTenancy:       false,
+		EnableSnatForDns:         false,
+		AllowInboundFromHostToNC: false,
+		AllowInboundFromNCToHost: false,
+		PODName:                  "ubuntu",
+		PODNameSpace:             "default",
+
+		Routes: []network.RouteInfo{
+			network.RouteInfo{
+				Dst: *ipnet,
+				Gw:  ip,
+			},
+		},
+	}
+
+	epInfo.Data = make(map[string]interface{})
+
 	info := &remoteApi.CreateEndpointRequest{
-		NetworkID:  networkID,
-		EndpointID: endpointID,
-		Interface:  &remoteApi.EndpointInterface{Address: anySubnet},
+		NetworkID:    networkID,
+		EndpointID:   endpointID,
+		Interface:    &remoteApi.EndpointInterface{Address: anySubnet},
+		EndpointInfo: epInfo,
 	}
 
 	info.Options = make(map[string]interface{})
@@ -219,9 +297,8 @@ func TestCreateEndpoint(t *testing.T) {
 	}
 }
 
-
 // Tests NetworkDriver.EndpointOperInfo functionality.
-func TestEndpointOperInfo(t *testing.T) {
+func endpointOperInfoT(t *testing.T) {
 	var body bytes.Buffer
 	var resp remoteApi.EndpointInfoResponse
 
@@ -245,8 +322,8 @@ func TestEndpointOperInfo(t *testing.T) {
 		t.Errorf("EndpointOperInfo response is invalid %+v, received err %v", resp, err)
 	}
 }
-*/
-func TestDeleteEndpoint(t *testing.T) {
+
+func deleteEndpointT(t *testing.T) {
 	var body bytes.Buffer
 	var resp remoteApi.DeleteEndpointResponse
 
@@ -273,7 +350,7 @@ func TestDeleteEndpoint(t *testing.T) {
 }
 
 // Tests NetworkDriver.DeleteNetwork functionality.
-func TestDeleteNetwork(t *testing.T) {
+func deleteNetworkT(t *testing.T) {
 	var body bytes.Buffer
 	var resp remoteApi.DeleteNetworkResponse
 

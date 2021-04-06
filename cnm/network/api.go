@@ -3,6 +3,8 @@
 
 package network
 
+import "github.com/Azure/azure-container-networking/network"
+
 const (
 	// Libnetwork network plugin endpoint type
 	endpointType = "NetworkDriver"
@@ -64,10 +66,11 @@ type deleteNetworkResponse struct {
 
 // Request sent by libnetwork when creating a new endpoint.
 type createEndpointRequest struct {
-	NetworkID  string
-	EndpointID string
-	Options    map[string]interface{}
-	Interface  endpointInterface
+	NetworkID    string
+	EndpointID   string
+	Options      map[string]interface{}
+	Interface    endpointInterface
+	EndpointInfo *network.EndpointInfo // optional, used to pass endpoint info ahead of time, used in tests
 }
 
 // Represents a libnetwork endpoint interface.
