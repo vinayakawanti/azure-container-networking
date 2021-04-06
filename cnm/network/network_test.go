@@ -163,6 +163,12 @@ func TestCreateNetwork(t *testing.T) {
 		},
 	}
 
+	info.Options = make(map[string]interface{})
+	info.Options["com.docker.network.generic"] = make(map[string]interface{})
+	info.Options["com.docker.network.generic"].(map[string]interface{})[modeOption] = "transparent"
+
+	fmt.Printf("%+v", info.Options)
+
 	json.NewEncoder(&body).Encode(info)
 
 	req, err := http.NewRequest(http.MethodGet, createNetworkPath, &body)
