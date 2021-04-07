@@ -199,10 +199,6 @@ func createNetworkT(t *testing.T) {
 	info.Options["com.docker.network.generic"] = make(map[string]interface{})
 	info.Options["com.docker.network.generic"].(map[string]interface{})[modeOption] = "transparent"
 
-	info.Options = make(map[string]interface{})
-	info.Options["com.docker.network.generic"] = make(map[string]interface{})
-	info.Options["com.docker.network.generic"].(map[string]interface{})[modeOption] = "transparent"
-
 	fmt.Printf("%+v", info.Options)
 
 	json.NewEncoder(&body).Encode(info)
@@ -270,15 +266,15 @@ func createEndpointT(t *testing.T) {
 	epInfo.Data = make(map[string]interface{})
 
 	info := &remoteApi.CreateEndpointRequest{
-		NetworkID:    networkID,
-		EndpointID:   endpointID,
-		Interface:    &remoteApi.EndpointInterface{Address: anySubnet},
-		EndpointInfo: epInfo,
+		NetworkID:  networkID,
+		EndpointID: endpointID,
+		Interface:  &remoteApi.EndpointInterface{Address: anySubnet},
 	}
 
 	info.Options = make(map[string]interface{})
 	info.Options["com.docker.network.generic"] = make(map[string]interface{})
 	info.Options["com.docker.network.generic"].(map[string]interface{})[modeOption] = "transparent"
+	info.Options["com.docker.network.generic"].(map[string]interface{})[epInfoOption] = epInfo
 
 	json.NewEncoder(&body).Encode(info)
 
