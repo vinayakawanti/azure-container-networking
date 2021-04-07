@@ -19,18 +19,10 @@ func TestPlugin(t *testing.T) {
 	config := &common.PluginConfig{}
 	pluginName := "testplugin"
 
-	//mockNetworkManager := acnnetwork.NewMockNetworkmanager()
-
 	grpcClient := &nns.MockGrpcClient{}
 	plugin, _ := NewPlugin(pluginName, config, grpcClient)
 	plugin.report = &telemetry.CNIReport{}
-	var err error
 	plugin.nm = network.NewMockNetworkmanager()
-	/*
-		if err != nil {
-			t.Fatal(err)
-		}
-	*/
 
 	nwCfg := cni.NetworkConfig{
 		Name:              "test-nwcfg",

@@ -27,14 +27,7 @@ stages:
         steps:
 
           - bash: |
-              cat /etc/profile
-              echo $PATH
-              whoami
-              pwd
-              ls -lah 
-              cat ~/.bashrc
-              /usr/local/go/bin/go version
-              go env
+              go version 
               mkdir -p '$(GOBIN)'
               mkdir -p '$(GOPATH)/pkg'
               mkdir -p '$(modulePath)'
@@ -43,6 +36,7 @@ stages:
               mv !(gopath) '$(modulePath)'
               echo '##vso[task.prependpath]$(GOBIN)'
               echo '##vso[task.prependpath]$(GOROOT)/bin'
+              go env
             name: "GoEnv"
             displayName: "Set up the Go environment"
 

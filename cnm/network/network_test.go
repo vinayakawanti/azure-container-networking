@@ -181,7 +181,6 @@ func TestCNM(t *testing.T) {
 	deleteEndpointT(t)
 	log.Printf("###DeleteNetwork#####################################################################################")
 	//deleteNetworkT(t)
-
 }
 
 // Tests NetworkDriver.CreateNetwork functionality.
