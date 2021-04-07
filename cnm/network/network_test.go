@@ -152,13 +152,24 @@ func TestGetCapabilities(t *testing.T) {
 }
 
 func TestCNM(t *testing.T) {
-	cmd := exec.Command("ip", "netns", "create", netns)
-	_, err := cmd.Output()
+	cmd := exec.Command("ip", "netns", "add", netns)
+	log.Printf("%v", cmd)
+	output, err := cmd.Output()
 
 	if err != nil {
-		fmt.Println(err.Error())
+		t.Fatalf("%v:%v", output, err.Error())
 		return
 	}
+
+	defer func() {
+		cmd = exec.Command("ip", "netns", "delete", netns)
+		_, err = cmd.Output()
+
+		if err != nil {
+			t.Fatalf("%v:%v", output, err)
+			return
+		}
+	}()
 
 	log.Printf("###CreateNetwork#####################################################################################")
 	createNetworkT(t)
@@ -171,13 +182,6 @@ func TestCNM(t *testing.T) {
 	log.Printf("###DeleteNetwork#####################################################################################")
 	//deleteNetworkT(t)
 
-	cmd = exec.Command("ip", "netns", "delete", netns)
-	_, err = cmd.Output()
-
-	if err != nil {
-		fmt.Println(err.Error())
-		return
-	}
 }
 
 // Tests NetworkDriver.CreateNetwork functionality.

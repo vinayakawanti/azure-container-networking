@@ -4,6 +4,8 @@
 package network
 
 import (
+	"encoding/json"
+	"fmt"
 	"net"
 	"net/http"
 
@@ -231,9 +233,15 @@ func (plugin *netPlugin) createEndpoint(w http.ResponseWriter, r *http.Request) 
 
 	if opt, optionsExist := req.Options[genericDataOption].(map[string]interface{}); optionsExist {
 		if epinfoOpt, epInfoExists := opt[epInfoOption]; epInfoExists {
-			epInfo = epinfoOpt.(*network.EndpointInfo)
+			b, err := json.Marshal(epinfoOpt)
+			fmt.Println(err)
+			var n network.EndpointInfo
+			err = json.Unmarshal(b, &n)
+			if err != nil {
+				fmt.Println(err)
+			}
+			epInfo = &n
 		}
-		//do something here
 	} else {
 		epInfo = &network.EndpointInfo{
 			Id:              req.EndpointID,
