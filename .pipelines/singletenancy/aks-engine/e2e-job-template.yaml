@@ -21,7 +21,7 @@ stages:
           - agent.os -equals Linux
           - Role -equals Build
         container:
-          image: quay.io/deis/go-dev:latest
+          image: mcr.microsoft.com/oss/azcu/go-dev:$(GO_DEV_IMAGE_TAG)
         variables:
           GOPATH: "$(Agent.TempDirectory)/go" # Go workspace path
           GOBIN: "$(GOPATH)/bin" # Go binaries path
