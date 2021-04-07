@@ -20,8 +20,6 @@ stages:
           demands: 
           - agent.os -equals Linux
           - Role -equals Build
-        container:
-          image: ${{ parameters.pipelineBuildImage }}
         variables:
           GOPATH: "$(Agent.TempDirectory)/go" # Go workspace path
           GOBIN: "$(GOPATH)/bin" # Go binaries path
