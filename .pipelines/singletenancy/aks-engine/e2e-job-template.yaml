@@ -20,6 +20,8 @@ stages:
           demands: 
           - agent.os -equals Linux
           - Role -equals Build
+        container:
+          image: quay.io/deis/go-dev:latest
         variables:
           GOPATH: "$(Agent.TempDirectory)/go" # Go workspace path
           GOBIN: "$(GOPATH)/bin" # Go binaries path
