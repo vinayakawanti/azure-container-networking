@@ -92,7 +92,7 @@ steps:
       export DEBUG_CRASHING_PODS=true
       export AZURE_CORE_ONLY_SHOW_ERRORS=True
       export
-      make test-kubernetes
+      sudo make test-kubernetes
     name: DeployAKSEngine
     displayName: Run AKS-Engine E2E Tests
     workingDirectory: "$(modulePath)"
