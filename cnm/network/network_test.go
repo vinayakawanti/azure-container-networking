@@ -18,7 +18,6 @@ import (
 	"github.com/Azure/azure-container-networking/common"
 	"github.com/Azure/azure-container-networking/log"
 	"github.com/Azure/azure-container-networking/netlink"
-	"github.com/Azure/azure-container-networking/network"
 	driverApi "github.com/docker/libnetwork/driverapi"
 	remoteApi "github.com/docker/libnetwork/drivers/remote/api"
 )
@@ -219,48 +218,6 @@ func createNetworkT(t *testing.T) {
 func createEndpointT(t *testing.T) {
 	var body bytes.Buffer
 	var resp remoteApi.CreateEndpointResponse
-
-	dnInfo := network.DNSInfo{
-		Servers: []string{"168.63.129.16"},
-	}
-
-	_, ipnet, err := net.ParseCIDR("0.0.0.0/0")
-	if err != nil {
-		log.Printf("%v", err)
-	}
-
-	ip := net.ParseIP("192.168.1.1")
-
-	_, ipv4Address, _ := net.ParseCIDR(anySubnet)
-
-	epInfo := &network.EndpointInfo{
-		Id:                       endpointID,
-		IPAddresses:              []net.IPNet{*ipv4Address},
-		SkipHotAttachEp:          true, // Skip hot attach endpoint as it's done in Join
-		ContainerID:              "2f3aeb850f2b36e94f9df86eb0c671d503dd30181a9ab9ed44de501acfc59ac2",
-		NetNsPath:                "/var/run/netns/22212",
-		IfName:                   "eth0",
-		IfIndex:                  0,
-		DNS:                      dnInfo,
-		IPsToRouteViaHost:        []string{"169.254.20.10"},
-		EnableSnatOnHost:         false,
-		EnableInfraVnet:          false,
-		EnableMultiTenancy:       false,
-		EnableSnatForDns:         false,
-		AllowInboundFromHostToNC: false,
-		AllowInboundFromNCToHost: false,
-		PODName:                  "ubuntu",
-		PODNameSpace:             "default",
-
-		Routes: []network.RouteInfo{
-			network.RouteInfo{
-				Dst: *ipnet,
-				Gw:  ip,
-			},
-		},
-	}
-
-	epInfo.Data = make(map[string]interface{})
 
 	info := &remoteApi.CreateEndpointRequest{
 		NetworkID:  networkID,
