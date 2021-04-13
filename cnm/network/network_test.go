@@ -155,7 +155,6 @@ func TestCNM(t *testing.T) {
 	cmd := exec.Command("ip", "netns", "add", netns)
 	log.Printf("%v", cmd)
 	output, err := cmd.Output()
-
 	if err != nil {
 		t.Fatalf("%v:%v", output, err.Error())
 		return
@@ -198,11 +197,6 @@ func createNetworkT(t *testing.T) {
 			},
 		},
 	}
-	info.Options = make(map[string]interface{})
-	info.Options["com.docker.network.generic"] = make(map[string]interface{})
-	info.Options["com.docker.network.generic"].(map[string]interface{})[modeOption] = "transparent"
-
-	fmt.Printf("%+v", info.Options)
 
 	json.NewEncoder(&body).Encode(info)
 
@@ -273,11 +267,6 @@ func createEndpointT(t *testing.T) {
 		EndpointID: endpointID,
 		Interface:  &remoteApi.EndpointInterface{Address: anySubnet},
 	}
-
-	info.Options = make(map[string]interface{})
-	info.Options["com.docker.network.generic"] = make(map[string]interface{})
-	info.Options["com.docker.network.generic"].(map[string]interface{})[modeOption] = "transparent"
-	info.Options["com.docker.network.generic"].(map[string]interface{})[epInfoOption] = epInfo
 
 	json.NewEncoder(&body).Encode(info)
 

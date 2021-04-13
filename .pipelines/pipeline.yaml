@@ -239,8 +239,6 @@ stages:
         pool:
           name: $(BUILD_POOL_NAME_DEFAULT)
           demands: agent.os -equals Linux
-        container:
-          image: "$(BUILD_IMAGE)"
         steps:
           - checkout: none
           - task: AzureCLI@1

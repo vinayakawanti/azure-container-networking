@@ -4,8 +4,6 @@
 package network
 
 import (
-	"encoding/json"
-	"fmt"
 	"net"
 	"net/http"
 
@@ -230,25 +228,15 @@ func (plugin *netPlugin) createEndpoint(w http.ResponseWriter, r *http.Request) 
 		ipv4Address.IP = ip
 	}
 
-	epInfo := &network.EndpointInfo{
+	epInfo := network.EndpointInfo{
 		Id:              req.EndpointID,
 		IPAddresses:     []net.IPNet{*ipv4Address},
 		SkipHotAttachEp: true, // Skip hot attach endpoint as it's done in Join
 	}
 
-	if opt, optionsExist := req.Options[genericDataOption].(map[string]interface{}); optionsExist {
-		if epinfoOpt, epInfoExists := opt[epInfoOption]; epInfoExists {
-			b, err := json.Marshal(epinfoOpt)
-			fmt.Println(err)
-			var n network.EndpointInfo
-			err = json.Unmarshal(b, &n)
-			epInfo = &n
-		}
-	}
-
 	epInfo.Data = make(map[string]interface{})
 
-	err = plugin.nm.CreateEndpoint(req.NetworkID, epInfo)
+	err = plugin.nm.CreateEndpoint(req.NetworkID, &epInfo)
 	if err != nil {
 		plugin.SendErrorResponse(w, err)
 		return

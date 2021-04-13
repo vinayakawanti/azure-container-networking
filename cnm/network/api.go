@@ -18,10 +18,7 @@ const (
 	endpointOperInfoPath = "/NetworkDriver.EndpointOperInfo"
 
 	// Libnetwork network plugin options
-	modeOption   = "com.microsoft.azure.network.mode"
-	epInfoOption = "com.microsoft.azure.network.endpointinfo"
-
-	genericDataOption = "com.docker.network.generic"
+	modeOption = "com.microsoft.azure.network.mode"
 )
 
 // Request sent by libnetwork when querying plugin capabilities.

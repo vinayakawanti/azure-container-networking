@@ -8,6 +8,7 @@ import (
 	"github.com/Azure/azure-container-networking/cni"
 	"github.com/Azure/azure-container-networking/common"
 	"github.com/Azure/azure-container-networking/network"
+	acnnetwork "github.com/Azure/azure-container-networking/network"
 	"github.com/Azure/azure-container-networking/nns"
 	"github.com/Azure/azure-container-networking/telemetry"
 	cniSkel "github.com/containernetworking/cni/pkg/skel"
@@ -19,10 +20,12 @@ func TestPlugin(t *testing.T) {
 	config := &common.PluginConfig{}
 	pluginName := "testplugin"
 
+	mockNetworkManager := acnnetwork.NewMockNetworkmanager()
+
 	grpcClient := &nns.MockGrpcClient{}
 	plugin, _ := NewPlugin(pluginName, config, grpcClient)
 	plugin.report = &telemetry.CNIReport{}
-	plugin.nm = network.NewMockNetworkmanager()
+	plugin.nm = mockNetworkManager
 
 	nwCfg := cni.NetworkConfig{
 		Name:              "test-nwcfg",
@@ -59,22 +62,12 @@ func TestPlugin(t *testing.T) {
 	epInfo := &network.EndpointInfo{
 		IPAddresses: []net.IPNet{*addr},
 	}
-	err = plugin.nm.CreateEndpoint(nwCfg.Name, epInfo)
-	/*
-		if err != nil {
-			t.Fatal(err)
-		}*/
+	plugin.nm.CreateEndpoint(nwCfg.Name, epInfo)
 
 	nwInfo := &network.NetworkInfo{
 		Id:      "test-nwcfg",
 		Options: make(map[string]interface{}),
 	}
-
-	err = plugin.nm.CreateNetwork(nwInfo)
-	/*
-		if err != nil {
-			t.Fatal(err)
-		}*/
-
-	//plugin.Add(args)
+	plugin.nm.CreateNetwork(nwInfo)
+	plugin.Delete(args)
 }
