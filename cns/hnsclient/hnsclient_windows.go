@@ -344,7 +344,7 @@ func LogNetworkInterfaces() {
 
 	for _, iface := range interfaces {
 		addrs, _ := iface.Addrs()
-		logger.Printf("[net] Network interface: %+v with IP: %+v", iface, addrs)
+		logger.Printf("Network interface: %+v with IP: %+v", iface, addrs)
 	}
 }
 
