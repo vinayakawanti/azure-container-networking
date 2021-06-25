@@ -241,7 +241,7 @@ stages:
       name: "windows_19_03_e2e"
       displayName: "Windows 1903"
       pipelineBuildImage: "$(BUILD_IMAGE)"
-      clusterDefinition: "cniWindows1903.json"
+      clusterDefinition: "cniWindows1809.json"
       clusterDefinitionCniTypeKey: "azureCNIURLWindows"
       clusterDefinitionCniBuildOS: "windows"
       clusterDefinitionCniBuildExt: ".zip"
