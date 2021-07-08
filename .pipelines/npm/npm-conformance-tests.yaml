@@ -26,6 +26,7 @@ jobs:
   - script: |
       go env
       go version
+      which go
       mkdir -p '$(GOBIN)'
       mkdir -p '$(GOPATH)/pkg'
       BUILD_NUMBER=$(Build.BuildNumber)
