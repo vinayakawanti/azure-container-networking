@@ -90,7 +90,7 @@ jobs:
     displayName: 'Clone Kubernetes Repo'
   - bash: |
       cd kubernetes
-      git checkout vakr/sleepinnpmtests
+      #git checkout vakr/sleepinnpmtests
       make WHAT=test/e2e/e2e.test
     displayName: 'Build Kubernetes e2e.test'
   - publish: $(System.DefaultWorkingDirectory)/kubernetes/_output/local/bin/linux/amd64
