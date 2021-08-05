@@ -1,0 +1,28 @@
+syntax="proto3";
+
+package api;
+
+message IPSet {
+    string Name = 1;
+    string HashedName = 2;
+    setType Type = 3;
+    repeated members Members = 4;
+    int32 ReferCount = 5;
+    int32 Size = 6;
+}
+
+message members {
+    bytes Value = 1;
+}
+
+enum setType {
+    Unknown = 0;
+    NameSpace = 1;
+    KeyLabelOfNameSpace = 2;
+    KeyValueLabelOfNameSpace = 3;
+    KeyLabelOfPod = 4;
+    KeyValueLabelOfPod = 5;
+    NamedPorts = 6;
+    NestedLabelOfPod = 7;
+    CIDRBlocks = 8;
+}

@@ -13,6 +13,7 @@ require (
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/libnetwork v0.8.0-dev.2.0.20210525090646-64b7a4574d14
 	github.com/golang/mock v1.4.1
+	github.com/golang/protobuf v1.5.2
 	github.com/google/uuid v1.1.2
 	github.com/gorilla/mux v1.8.0
 	github.com/hashicorp/go-version v1.3.0
@@ -33,7 +34,7 @@ require (
 	golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c
 	golang.org/x/term v0.0.0-20210503060354-a79de5458b56 // indirect
 	google.golang.org/grpc v1.27.1
-	google.golang.org/protobuf v1.26.0
+	google.golang.org/protobuf v1.27.1
 	k8s.io/api v0.21.3
 	k8s.io/apiextensions-apiserver v0.21.3
 	k8s.io/apimachinery v0.21.3

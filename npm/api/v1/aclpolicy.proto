@@ -1,0 +1,40 @@
+syntax="proto3";
+
+package api;
+
+import "ipset.proto";
+
+message AclPolicy {
+    string PolicyID = 1;
+    string PolicyName = 2;
+    string Comment = 3;
+    repeated SetInfo SrcList = 4;
+    repeated SetInfo DstList = 5;
+    Verdict Target = 6;
+    Direction Direction = 7;
+    string Protocol = 8;
+    repeated Ports SrcPortList = 9;
+    repeated Ports DstPortList = 10;
+}
+
+message SetInfo {
+    IPSet IPSet = 1;
+    bool Included = 2;
+    string MatchType = 3;
+}
+
+message Ports {
+    int64 Port = 1;
+    int64 EndPort = 2;
+}
+
+enum Verdict {
+    ALLOW = 0;
+    DENY = 1;
+}
+
+enum Direction {
+    INGRESS = 0; // IN
+    EGRESS = 1; // OUT
+    BOTH = 2;
+}
