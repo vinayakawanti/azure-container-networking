@@ -6,13 +6,13 @@ message IPSet {
     string Name = 1;
     string HashedName = 2;
     setType Type = 3;
-    repeated members Members = 4;
-    int32 ReferCount = 5;
-    int32 Size = 6;
-}
-
-message members {
-    bytes Value = 1;
+    // IpPodKey is used for setMaps to store Ips and ports as keys
+    // and podKey as value
+    map<string, string> IpPodKey = 4; 
+    // This is used for listMaps to store child IP Sets
+    map<string, IPSet> IPSet = 5; 
+    int32 ReferCount = 6;
+    int32 Size = 7;
 }
 
 enum setType {

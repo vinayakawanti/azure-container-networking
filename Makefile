@@ -88,6 +88,7 @@ TELEMETRY_CONF_DIR = telemetry
 CNS_DIR = cns/service
 CNMS_DIR = cnms/service
 NPM_DIR = npm/plugin
+NPM_API_DIR = npm/api/v1
 OUTPUT_DIR = output
 BUILD_DIR = $(OUTPUT_DIR)/$(GOOS)_$(GOARCH)
 IMAGE_DIR  = $(OUTPUT_DIR)/images
@@ -320,6 +321,10 @@ azure-vnet-plugin-image: azure-cnm-plugin
 .PHONY: publish-azure-vnet-plugin-image
 publish-azure-vnet-plugin-image:
 	docker plugin push $(CNM_PLUGIN_IMAGE):$(VERSION)
+
+.PHONY: azure-npm-proto-build
+azure-npm-proto-build:
+	protoc --go_out=$(NPM_API_DIR) $(NPM_API_DIR)/*.proto --proto_path=$(NPM_API_DIR)
 
 # Build the Azure NPM image.
 .PHONY: azure-npm-image
