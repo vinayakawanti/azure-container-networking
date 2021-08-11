@@ -41,15 +41,15 @@ func NewIPSetManager() *IPSetManager {
 	}
 }
 
-func (mgr *IPSetManager) getSetCache(set *api.IPSet) (*IPSetMap, error) {
+func (iMgr *IPSetManager) getSetCache(set *api.IPSet) (*IPSetMap, error) {
 	kind := getSetKind(set)
 
 	var m *IPSetMap
 	switch kind {
 	case ListSet:
-		m = mgr.listMap
+		m = iMgr.listMap
 	case HashSet:
-		m = mgr.setMap
+		m = iMgr.setMap
 	default:
 		return nil, errors.Errorf(errors.CreateIPSet, false, "unknown Set kind")
 	}
@@ -57,9 +57,9 @@ func (mgr *IPSetManager) getSetCache(set *api.IPSet) (*IPSetMap, error) {
 }
 
 // CreateIPSet creates a new ipset of type set or list
-func (mgr *IPSetManager) CreateIPSet(set *api.IPSet) error {
+func (iMgr *IPSetManager) CreateIPSet(set *api.IPSet) error {
 
-	m, err := mgr.getSetCache(set)
+	m, err := iMgr.getSetCache(set)
 	if err != nil {
 		return err
 	}
@@ -83,19 +83,19 @@ func (mgr *IPSetManager) CreateIPSet(set *api.IPSet) error {
 	return nil
 }
 
-func (mgr *IPSetManager) AddToSet(setName, ip, podKey string) error {
+func (iMgr *IPSetManager) AddToSet(setName, ip, podKey string) error {
 
 	// check if the IP is IPV$ family
 	if net.ParseIP(ip).To4() == nil {
 		return errors.Errorf(errors.AppendIPSet, false, "IPV6 not supported")
 	}
 
-	mgr.setMap.Lock()
-	defer mgr.setMap.Unlock()
-	set, exists := mgr.setMap.cache[setName] // check if the Set exists
+	iMgr.setMap.Lock()
+	defer iMgr.setMap.Unlock()
+	set, exists := iMgr.setMap.cache[setName] // check if the Set exists
 	if !exists {
 		set = NewIPSet(setName, api.SetType_Unknown)
-		err := mgr.CreateIPSet(set)
+		err := iMgr.CreateIPSet(set)
 		if err != nil {
 			return err
 		}
@@ -129,10 +129,10 @@ func (mgr *IPSetManager) AddToSet(setName, ip, podKey string) error {
 	return nil
 }
 
-func (mgr *IPSetManager) DeleteFromSet(setName, ip, podKey string) error {
-	mgr.setMap.Lock()
-	defer mgr.setMap.Unlock()
-	set, exists := mgr.setMap.cache[setName] // check if the Set exists
+func (iMgr *IPSetManager) DeleteFromSet(setName, ip, podKey string) error {
+	iMgr.setMap.Lock()
+	defer iMgr.setMap.Unlock()
+	set, exists := iMgr.setMap.cache[setName] // check if the Set exists
 	if !exists {
 		return errors.Errorf(errors.DeleteIPSet, false, fmt.Sprintf("ipset %s does not exist", setName))
 	}
@@ -164,26 +164,26 @@ func (mgr *IPSetManager) DeleteFromSet(setName, ip, podKey string) error {
 	return nil
 }
 
-func (mgr *IPSetManager) AddToList(listName, setName string) error {
+func (iMgr *IPSetManager) AddToList(listName, setName string) error {
 
 	if listName == setName {
 		return errors.Errorf(errors.AppendIPSet, false, fmt.Sprintf("list %s cannot be added to itself", listName))
 	}
 
-	mgr.listMap.Lock()
-	defer mgr.listMap.Unlock()
-	set, exists := mgr.setMap.cache[setName] // check if the Set exists
+	iMgr.listMap.Lock()
+	defer iMgr.listMap.Unlock()
+	set, exists := iMgr.setMap.cache[setName] // check if the Set exists
 	if !exists {
 		return errors.Errorf(errors.AppendIPSet, false, fmt.Sprintf("member ipset %s does not exist", setName))
 	}
 
 	// Nested IPSets are only supported for windows
 	//Check if we want to actually use that support
-	if getSetKind(set) != HashSet && mgr.os != "windows" {
+	if getSetKind(set) != HashSet && iMgr.os != "windows" {
 		return errors.Errorf(errors.DeleteIPSet, false, fmt.Sprintf("member ipset %s is not a Set type and nestetd ipsets are not supported", setName))
 	}
 
-	list, exists := mgr.listMap.cache[listName] // check if the Set exists
+	list, exists := iMgr.listMap.cache[listName] // check if the Set exists
 	if !exists {
 		return errors.Errorf(errors.AppendIPSet, false, fmt.Sprintf("ipset %s does not exist", listName))
 	}
@@ -210,6 +210,7 @@ func (mgr *IPSetManager) AddToList(listName, setName string) error {
 
 	// update the Ipset member list of list
 	list.IPSet[setName] = set
+	IncReferCount(set)
 
 	// Update metrics of the IpSet
 	metrics.NumIPSetEntries.Inc()
@@ -218,10 +219,10 @@ func (mgr *IPSetManager) AddToList(listName, setName string) error {
 	return nil
 }
 
-func (mgr *IPSetManager) DeleteFromList(listName, setName string) error {
-	mgr.listMap.Lock()
-	defer mgr.listMap.Unlock()
-	set, exists := mgr.setMap.cache[setName] // check if the Set exists
+func (iMgr *IPSetManager) DeleteFromList(listName, setName string) error {
+	iMgr.listMap.Lock()
+	defer iMgr.listMap.Unlock()
+	set, exists := iMgr.setMap.cache[setName] // check if the Set exists
 	if !exists {
 		return errors.Errorf(errors.DeleteIPSet, false, fmt.Sprintf("ipset %s does not exist", setName))
 	}
@@ -232,11 +233,11 @@ func (mgr *IPSetManager) DeleteFromList(listName, setName string) error {
 
 	// Nested IPSets are only supported for windows
 	//Check if we want to actually use that support
-	if getSetKind(set) != HashSet && mgr.os != "windows" {
+	if getSetKind(set) != HashSet && iMgr.os != "windows" {
 		return errors.Errorf(errors.DeleteIPSet, false, fmt.Sprintf("member ipset %s is not a Set type and nestetd ipsets are not supported", setName))
 	}
 
-	list, exists := mgr.listMap.cache[listName] // check if the Set exists
+	list, exists := iMgr.listMap.cache[listName] // check if the Set exists
 	if !exists {
 		return errors.Errorf(errors.DeleteIPSet, false, fmt.Sprintf("ipset %s does not exist", listName))
 	}
@@ -255,28 +256,35 @@ func (mgr *IPSetManager) DeleteFromList(listName, setName string) error {
 	// err := deleteFromList(listName, setName)
 	// some more error handling here
 
-	// update the I
+	// delete IPSet from the list
+	delete(list.IPSet, setName)
+	DecReferCount(set)
+
+	// Update metrics of the IpSet
+	metrics.NumIPSetEntries.Dec()
+	metrics.DecIPSetInventory(setName)
+
 	return nil
 }
 
-func (mgr *IPSetManager) DeleteList(name string) {
-	mgr.listMap.Lock()
-	defer mgr.listMap.Unlock()
-	delete(mgr.listMap.cache, name)
+func (iMgr *IPSetManager) DeleteList(name string) {
+	iMgr.listMap.Lock()
+	defer iMgr.listMap.Unlock()
+	delete(iMgr.listMap.cache, name)
 }
 
-func (mgr *IPSetManager) DeleteSet(name string) {
-	mgr.setMap.Lock()
-	defer mgr.setMap.Unlock()
-	delete(mgr.setMap.cache, name)
+func (iMgr *IPSetManager) DeleteSet(name string) {
+	iMgr.setMap.Lock()
+	defer iMgr.setMap.Unlock()
+	delete(iMgr.setMap.cache, name)
 }
 
 // TODO: do we need this function ?
-func (mgr *IPSetManager) Clear() {
-	mgr.listMap.Lock()
-	defer mgr.listMap.Unlock()
-	mgr.listMap.cache = make(map[string]*api.IPSet)
-	mgr.setMap.Lock()
-	defer mgr.setMap.Unlock()
-	mgr.setMap.cache = make(map[string]*api.IPSet)
+func (iMgr *IPSetManager) Clear() {
+	iMgr.listMap.Lock()
+	defer iMgr.listMap.Unlock()
+	iMgr.listMap.cache = make(map[string]*api.IPSet)
+	iMgr.setMap.Lock()
+	defer iMgr.setMap.Unlock()
+	iMgr.setMap.cache = make(map[string]*api.IPSet)
 }

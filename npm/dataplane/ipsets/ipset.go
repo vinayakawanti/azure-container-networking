@@ -19,9 +19,17 @@ func NewIPSet(name string, setType api.SetType) *api.IPSet {
 		IpPodKey:   make(map[string]string),
 		Type:       setType,
 		ReferCount: int32(0),
-		Size:       int32(0),
+		Size:       int32(0), // Do we need this ? may be max limit
 		IPSet:      make(map[string]*api.IPSet),
 	}
+}
+
+func IncReferCount(set *api.IPSet) {
+	set.ReferCount++
+}
+
+func DecReferCount(set *api.IPSet) {
+	set.ReferCount--
 }
 
 func getSetKind(set *api.IPSet) SetKind {
