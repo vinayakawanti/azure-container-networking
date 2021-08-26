@@ -4,6 +4,16 @@ package api;
 
 import "ipset.proto";
 
+message NPMNetworkPolicy {
+    string Name = 1;
+    map<string, IPSet> IPSet = 2;
+    repeated  AclPolicy ACLs = 3;
+    // Making this a podKey instead should be 
+    // use NPMPod obj
+    repeated string Pods = 4;
+
+}
+
 message AclPolicy {
     string PolicyID = 1;
     string PolicyName = 2;

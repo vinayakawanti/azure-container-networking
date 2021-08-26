@@ -41,6 +41,17 @@ type networkPolicyController struct {
 	isAzureNpmChainCreated bool
 }
 
+type IPSet string
+
+type NPMNetworkPolicy struct {
+	Name              string
+	PodSelectorIPSets []*IPSet
+	OtherIPSets       []*IPSet
+	ACLs              []*ACLPolicy
+	Pods              []string
+	NetPol            *networkingv1.NetworkPolicy
+}
+
 func NewNetworkPolicyController(npInformer networkinginformers.NetworkPolicyInformer, clientset kubernetes.Interface, npMgr *NetworkPolicyManager) *networkPolicyController {
 	netPolController := &networkPolicyController{
 		clientset:              clientset,

@@ -15,15 +15,15 @@ type PolicyManager struct {
 	policyMap *PolicyMap
 }
 
-func NewPolicyManager() *PolicyManager {
-	return &PolicyManager{
+func NewPolicyManager() PolicyManager {
+	return PolicyManager{
 		policyMap: &PolicyMap{
 			cache: make(map[string]*api.AclPolicy),
 		},
 	}
 }
 
-func (pMgr *PolicyManager) Get(name string) (*api.AclPolicy, error) {
+func (pMgr *PolicyManager) GetPolicy(name string) (*api.AclPolicy, error) {
 	pMgr.policyMap.Lock()
 	defer pMgr.policyMap.Unlock()
 
@@ -34,7 +34,7 @@ func (pMgr *PolicyManager) Get(name string) (*api.AclPolicy, error) {
 	return nil, nil
 }
 
-func (pMgr *PolicyManager) Add(policy *api.AclPolicy) error {
+func (pMgr *PolicyManager) AddPolicy(policy *api.AclPolicy) error {
 	pMgr.policyMap.Lock()
 	defer pMgr.policyMap.Unlock()
 
@@ -46,7 +46,7 @@ func (pMgr *PolicyManager) Add(policy *api.AclPolicy) error {
 	return nil
 }
 
-func (pMgr *PolicyManager) Remove(name string) error {
+func (pMgr *PolicyManager) RemovePolicy(name string) error {
 	pMgr.policyMap.Lock()
 	defer pMgr.policyMap.Unlock()
 

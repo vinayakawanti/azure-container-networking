@@ -1,6 +1,8 @@
 package ipsets
 
 import (
+	"fmt"
+
 	"github.com/Azure/azure-container-networking/npm/api/v1"
 	"github.com/Azure/azure-container-networking/npm/util"
 )
@@ -21,6 +23,25 @@ func NewIPSet(name string, setType api.SetType) *api.IPSet {
 		ReferCount: int32(0),
 		Size:       int32(0), // Do we need this ? may be max limit
 		IPSet:      make(map[string]*api.IPSet),
+	}
+}
+
+func GetSetContents(set *api.IPSet) ([]string, error) {
+	contents := make([]string, 0)
+	setType := getSetKind(set)
+	switch setType {
+	case HashSet:
+		for podIp := range set.IpPodKey {
+			contents = append(contents, podIp)
+		}
+		return contents, nil
+	case ListSet:
+		for _, memberSet := range set.IPSet {
+			contents = append(contents, memberSet.HashedName)
+		}
+		return contents, nil
+	default:
+		return contents, fmt.Errorf("Unknown set type %s", setType)
 	}
 }
 

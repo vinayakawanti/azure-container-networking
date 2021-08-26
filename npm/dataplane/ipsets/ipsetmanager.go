@@ -33,11 +33,11 @@ type IPSetManager struct {
 	os      string
 }
 
-func NewIPSetManager() *IPSetManager {
-	return &IPSetManager{
+func NewIPSetManager(os string) IPSetManager {
+	return IPSetManager{
 		listMap: newIPSetMap(),
 		setMap:  newIPSetMap(),
-		os:      "linux",
+		os:      os,
 	}
 }
 
