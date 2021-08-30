@@ -223,6 +223,8 @@ func (ipsMgr *IpsetManager) createList(listName string) error {
 	return nil
 }
 
+/* (TODO) commenting function as it not being used today.
+   But useful to keep for future
 // Destroy completely cleans ipset.
 func (ipsMgr *IpsetManager) destroy() error {
 	entry := &ipsEntry{
@@ -241,7 +243,7 @@ func (ipsMgr *IpsetManager) destroy() error {
 
 	// TODO set IPSetInventory to 0 for all set names
 	return nil
-}
+} */
 
 // createSet creates an ipset.
 func (ipsMgr *IpsetManager) createSet(setName string, spec []string) error {
@@ -641,6 +643,8 @@ func (ipsMgr *IpsetManager) DestroyNpmIpsets() error {
 	return nil
 }
 
+/* (TODO) commenting function as it not being used today.
+   But useful to keep for future
 // Clean removes all the empty sets & lists under the namespace.
 func (ipsMgr *IpsetManager) Clean() error {
 	ipsMgr.Lock()
@@ -668,4 +672,4 @@ func (ipsMgr *IpsetManager) Clean() error {
 	}
 
 	return nil
-}
+} */
