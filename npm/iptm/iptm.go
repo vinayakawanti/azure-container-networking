@@ -140,7 +140,9 @@ func (iptMgr *IptablesManager) UninitNpmChains() error {
 
 // Add adds a rule in iptables.
 func (iptMgr *IptablesManager) Add(entry *IptEntry) error {
-	timer := metrics.StartNewTimer()
+	// This timer measures execution time to run this function regardless of success or failure cases
+	prometheusTimer := metrics.StartNewTimer()
+	defer prometheusTimer.StopAndRecord(metrics.AddIPTableRuleExecTime)
 
 	log.Logf("Adding iptables entry: %+v.", entry)
 
@@ -157,7 +159,6 @@ func (iptMgr *IptablesManager) Add(entry *IptEntry) error {
 	}
 
 	metrics.NumIPTableRules.Inc()
-	timer.StopAndRecord(metrics.AddIPTableRuleExecTime)
 
 	return nil
 }

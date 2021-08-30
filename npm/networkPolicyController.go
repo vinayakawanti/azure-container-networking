@@ -310,8 +310,8 @@ func (c *networkPolicyController) initializeDefaultAzureNpmChain() error {
 // syncAddAndUpdateNetPol handles a new network policy or an updated network policy object triggered by add and update events
 func (c *networkPolicyController) syncAddAndUpdateNetPol(netPolObj *networkingv1.NetworkPolicy) error {
 	// This timer measures execution time to run this function regardless of success or failure cases
-	timer := metrics.StartNewTimer()
-	defer timer.StopAndRecord(metrics.AddPolicyExecTime)
+	prometheusTimer := metrics.StartNewTimer()
+	defer prometheusTimer.StopAndRecord(metrics.AddPolicyExecTime)
 
 	var err error
 	netpolKey, err := cache.MetaNamespaceKeyFunc(netPolObj)

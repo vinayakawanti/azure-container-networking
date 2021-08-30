@@ -245,11 +245,14 @@ func (ipsMgr *IpsetManager) destroy() error {
 
 // createSet creates an ipset.
 func (ipsMgr *IpsetManager) createSet(setName string, spec []string) error {
-	timer := metrics.StartNewTimer()
+	// This timer measures execution time to run this function regardless of success or failure cases
+	prometheusTimer := metrics.StartNewTimer()
 
 	if _, exists := ipsMgr.setMap[setName]; exists {
 		return nil
 	}
+
+	defer prometheusTimer.StopAndRecord(metrics.AddIPSetExecTime)
 
 	entry := &ipsEntry{
 		name:          setName,
@@ -272,7 +275,6 @@ func (ipsMgr *IpsetManager) createSet(setName string, spec []string) error {
 	ipsMgr.setMap[setName] = newIpset(setName)
 
 	metrics.NumIPSets.Inc()
-	timer.StopAndRecord(metrics.AddIPSetExecTime)
 	metrics.SetIPSetInventory(setName, 0)
 
 	return nil
