@@ -467,6 +467,8 @@ func TestDeleteFromSetWithPodCache(t *testing.T) {
 // 	}
 // }
 
+/* (TODO) commenting function as it not being used today.
+   But useful to keep for future
 func TestDestroy(t *testing.T) {
 	setName := "test-destroy"
 	testIP := "1.2.3.4"
@@ -510,7 +512,7 @@ func TestDestroy(t *testing.T) {
 			t.Errorf("TestDestroy failed @ ipsMgr.Destroy since %s still exist in ipset with err %+v", testIP, err)
 		}
 	}
-}
+} */
 
 func TestRun(t *testing.T) {
 	var calls = []testutils.TestCmd{
