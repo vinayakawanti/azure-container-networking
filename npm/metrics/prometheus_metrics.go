@@ -24,7 +24,7 @@ var (
 	AddIPSetExecTime       prometheus.Summary
 	NumIPSetEntries        prometheus.Gauge
 
-	// IPSetInventory should not be referenced directly. Use the functions in ipset-inventory.go
+	// IPSetInventory should not be referenced directly besides for testing with promutil. Use the functions in ipset-inventory.go
 	IPSetInventory *prometheus.GaugeVec
 )
 
