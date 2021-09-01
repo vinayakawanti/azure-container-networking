@@ -16,7 +16,6 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	networkinginformers "k8s.io/client-go/informers/networking/v1"
-	"k8s.io/client-go/kubernetes"
 	netpollister "k8s.io/client-go/listers/networking/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
@@ -33,7 +32,6 @@ const (
 )
 
 type networkPolicyController struct {
-	clientset    kubernetes.Interface
 	netPolLister netpollister.NetworkPolicyLister
 	workqueue    workqueue.RateLimitingInterface
 	rawNpMap     map[string]*networkingv1.NetworkPolicy // Key is <nsname>/<policyname>
@@ -45,10 +43,8 @@ type networkPolicyController struct {
 	iptMgr                 *iptm.IptablesManager
 }
 
-func NewNetworkPolicyController(npInformer networkinginformers.NetworkPolicyInformer,
-	clientset kubernetes.Interface, ipsMgr *ipsm.IpsetManager) *networkPolicyController {
+func NewNetworkPolicyController(npInformer networkinginformers.NetworkPolicyInformer, ipsMgr *ipsm.IpsetManager) *networkPolicyController {
 	netPolController := &networkPolicyController{
-		clientset:    clientset,
 		netPolLister: npInformer.Lister(),
 		workqueue:    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "NetworkPolicy"),
 		rawNpMap:     make(map[string]*networkingv1.NetworkPolicy),

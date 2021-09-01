@@ -20,7 +20,6 @@ import (
 	coreinformer "k8s.io/client-go/informers/core/v1"
 	corelisters "k8s.io/client-go/listers/core/v1"
 
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog"
@@ -108,7 +107,6 @@ func (nPod *NpmPod) updateNpmPodAttributes(podObj *corev1.Pod) {
 }
 
 type podController struct {
-	clientset kubernetes.Interface
 	podLister corelisters.PodLister
 	workqueue workqueue.RateLimitingInterface
 	ipsMgr    *ipsm.IpsetManager
@@ -117,10 +115,8 @@ type podController struct {
 	npmNamespaceCache *npmNamespaceCache
 }
 
-func NewPodController(podInformer coreinformer.PodInformer, clientset kubernetes.Interface,
-	ipsMgr *ipsm.IpsetManager, npmNamespaceCache *npmNamespaceCache) *podController {
+func NewPodController(podInformer coreinformer.PodInformer, ipsMgr *ipsm.IpsetManager, npmNamespaceCache *npmNamespaceCache) *podController {
 	podController := &podController{
-		clientset:         clientset,
 		podLister:         podInformer.Lister(),
 		workqueue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Pods"),
 		ipsMgr:            ipsMgr,
