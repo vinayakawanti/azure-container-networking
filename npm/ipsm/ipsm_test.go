@@ -349,6 +349,9 @@ func TestAddToSetWithCachePodInfo(t *testing.T) {
 	ipsMgr := NewIpsetManager(fexec)
 	defer testutils.VerifyCalls(t, fexec, calls)
 
+	execCount := resetPrometheusAndGetExecCount(t, setname)
+	defer testPrometheusMetrics(t, 0, execCount+1, 0, expectedSetInfo{0, setname})
+
 	err := ipsMgr.AddToSet(setname, ip, util.IpsetNetHashFlag, pod1)
 	require.NoError(t, err)
 
