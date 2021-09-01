@@ -529,7 +529,7 @@ func TestDestroyNpmIpsets(t *testing.T) {
 	if debug {
 		ipsMgr = NewIpsetManager(exec.New())
 	} else {
-		var calls = []testutils.TestCmd{
+		calls := []testutils.TestCmd{
 			{Cmd: []string{"ipset", "-N", "-exist", util.GetHashedName(testSet1Name), "nethash"}},
 			{Cmd: []string{"ipset", "-N", "-exist", util.GetHashedName(testSet2Name), "nethash"}},
 			{Cmd: []string{"ipset", "list"}},
