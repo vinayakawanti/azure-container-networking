@@ -16,7 +16,8 @@ func GetIPSetInventory(setName string) int {
 	return 0
 }
 
-// SetIPSetInventory sets the number of entries in an IPSet and updates a Prometheus metric. When val is 0, the set will be deleted from the IPSetInventory metric.
+// SetIPSetInventory sets the number of entries in an IPSet and updates a Prometheus metric.
+// When val is 0, the set will be deleted from the IPSetInventory metric.
 func SetIPSetInventory(setName string, val int) {
 	_, exists := ipsetInventoryMap[setName]
 	if exists || val != 0 {
@@ -35,7 +36,8 @@ func IncIPSetInventory(setName string) {
 	updateIPSetInventory(setName)
 }
 
-// DecIPSetInventory decreases the number of entries in an IPSet and updates a Prometheus metric. If the set has 0 members after this operation, it will be deleted from the IPSetInventory metric.
+// DecIPSetInventory decreases the number of entries in an IPSet and updates a Prometheus metric.
+// If the set has 0 members after this operation, it will be deleted from the IPSetInventory metric.
 func DecIPSetInventory(setName string) {
 	_, exists := ipsetInventoryMap[setName]
 	if exists {
@@ -49,7 +51,8 @@ func GetIPSetInventoryLabels(setName string) prometheus.Labels {
 	return prometheus.Labels{SetNameLabel: setName, SetHashLabel: util.GetHashedName(setName)}
 }
 
-// updateIPSetInventory modifies the IPSetInventory metric. A set with 0 members will be deleted from the metric and the ipsetInventoryMap.
+// updateIPSetInventory modifies the IPSetInventory metric.
+// A set with 0 members will be deleted from the metric and the ipsetInventoryMap.
 func updateIPSetInventory(setName string) {
 	labels := GetIPSetInventoryLabels(setName)
 	if ipsetInventoryMap[setName] == 0 {
