@@ -226,34 +226,12 @@ func (ipsMgr *IpsetManager) createList(listName string) error {
 		return err
 	}
 	if err == nil {
-		handleMetricCountsOnCreate(listName)
+		handleMetricCountsOnCreate()
 	}
 
 	ipsMgr.listMap[listName] = newIpset(listName)
 	return nil
 }
-
-/* (TODO) commenting function as it not being used today.
-   But useful to keep for future
-// Destroy completely cleans ipset.
-func (ipsMgr *IpsetManager) destroy() error {
-	entry := &ipsEntry{
-		operationFlag: util.IpsetFlushFlag,
-	}
-	if _, err := ipsMgr.run(entry); err != nil {
-		metrics.SendErrorLogAndMetric(util.IpsmID, "Error: failed to flush ipset")
-		return err
-	}
-
-	entry.operationFlag = util.IpsetDestroyFlag
-	if _, err := ipsMgr.run(entry); err != nil {
-		metrics.SendErrorLogAndMetric(util.IpsmID, "Error: failed to destroy ipset")
-		return err
-	}
-
-	// TODO set IPSetInventory to 0 for all set names
-	return nil
-} */
 
 // createSet creates an ipset.
 func (ipsMgr *IpsetManager) createSet(setName string, spec []string) error {
@@ -285,7 +263,7 @@ func (ipsMgr *IpsetManager) createSet(setName string, spec []string) error {
 		return err
 	}
 	if err == nil {
-		handleMetricCountsOnCreate(setName)
+		handleMetricCountsOnCreate()
 	}
 
 	ipsMgr.setMap[setName] = newIpset(setName)
@@ -655,38 +633,7 @@ func (ipsMgr *IpsetManager) DestroyNpmIpsets() error {
 	return nil
 }
 
-/* (TODO) commenting function as it not being used today.
-   But useful to keep for future
-// Clean removes all the empty sets & lists under the namespace.
-func (ipsMgr *IpsetManager) Clean() error {
-	ipsMgr.Lock()
-	defer ipsMgr.Unlock()
-	for setName, set := range ipsMgr.setMap {
-		if len(set.elements) > 0 {
-			continue
-		}
-
-		if err := ipsMgr.deleteSet(setName); err != nil {
-			metrics.SendErrorLogAndMetric(util.IpsmID, "Error: failed to clean ipset")
-			return err
-		}
-	}
-
-	for listName, list := range ipsMgr.listMap {
-		if len(list.elements) > 0 {
-			continue
-		}
-
-		if err := ipsMgr.deleteList(listName); err != nil {
-			metrics.SendErrorLogAndMetric(util.IpsmID, "Error: failed to clean ipset list")
-			return err
-		}
-	}
-
-	return nil
-} */
-
-func handleMetricCountsOnCreate(setName string) {
+func handleMetricCountsOnCreate() {
 	metrics.NumIPSets.Inc()
 }
 

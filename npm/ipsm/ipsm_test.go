@@ -20,7 +20,7 @@ type expectedSetInfo struct {
 }
 
 func TestCreateList(t *testing.T) {
-	var testListName = "test-list"
+	testListName := "test-list"
 
 	var calls = []testutils.TestCmd{
 		{Cmd: []string{"ipset", "-N", "-exist", util.GetHashedName(testListName), "setlist"}},
@@ -49,13 +49,19 @@ func testPrometheusMetrics(t *testing.T, expectedNumSets, expectedExecCount, exp
 	numSets, err := promutil.GetValue(metrics.NumIPSets)
 	promutil.NotifyIfErrors(t, err)
 	if numSets != expectedNumSets {
-		require.FailNowf(t, "", "Change in number of ipsets didn't register in Prometheus. Expected %d. Got %d.", expectedNumSets, numSets)
+		require.FailNowf(t, "", "Number of ipsets didn't register correctly in Prometheus. Expected %d. Got %d.", expectedNumSets, numSets)
 	}
 
 	execCount, err := promutil.GetCountValue(metrics.AddIPSetExecTime)
 	promutil.NotifyIfErrors(t, err)
 	if execCount != expectedExecCount {
-		require.FailNowf(t, "", "Count for execution time didn't register in Prometheus. Expected %d. Got %d.", expectedExecCount, execCount)
+		require.FailNowf(t, "", "Count for execution time didn't register correctly in Prometheus. Expected %d. Got %d.", expectedExecCount, execCount)
+	}
+
+	numEntries, err := promutil.GetValue(metrics.NumIPSetEntries)
+	promutil.NotifyIfErrors(t, err)
+	if numEntries != expectedNumEntries {
+		require.FailNowf(t, "", "Number of ipset entries didn't register correctly in Prometheus. Expected %d. Got %d.", expectedNumEntries, numEntries)
 	}
 
 	for _, set := range expectedSets {
@@ -466,74 +472,6 @@ func TestDeleteFromSetWithPodCache(t *testing.T) {
 		t.Errorf("TestDeleteFromSetWithPodCache failed @ ipsMgr.DeleteFromSet")
 	}
 }
-
-// (TODO): it looks this UT is not valid to test Clean function It tests "ipset save".
-// I am not sure when Clean function is used and how Clean function changes.
-// When someone wants to use Clean function, please update this UT function properly.
-// func TestClean(t *testing.T) {
-// 	var calls = []testutils.TestCmd{
-// 		{Cmd: []string{"ipset", "save", "-file", "/var/log/ipset-test.conf"}},
-// 	}
-
-// 	fexec := testutils.GetFakeExecWithScripts(calls)
-// 	ipsMgr := NewIpsetManager(fexec)
-// 	defer testutils.VerifyCalls(t, fexec, calls)
-
-// 	if err := ipsMgr.Save(util.IpsetTestConfigFile); err != nil {
-// 		t.Errorf("TestClean failed @ ipsMgr.Save")
-// 	}
-
-// 	if err := ipsMgr.Clean(); err != nil {
-// 		t.Errorf("TestClean failed @ ipsMgr.Clean")
-// 	}
-// }
-
-/* (TODO) commenting function as it not being used today.
-   But useful to keep for future
-func TestDestroy(t *testing.T) {
-	setName := "test-destroy"
-	testIP := "1.2.3.4"
-
-	var calls = []testutils.TestCmd{
-		{Cmd: []string{"ipset", "-N", "-exist", util.GetHashedName(setName), "nethash"}},
-		{Cmd: []string{"ipset", "-A", "-exist", util.GetHashedName(setName), testIP}},
-		{Cmd: []string{"ipset", "-F", "-exist"}},
-		{Cmd: []string{"ipset", "-X", "-exist"}},
-		{Cmd: []string{"ipset", "list", "-exist", util.GetHashedName(setName)}, ExitCode: 2},
-	}
-
-	fexec := testutils.GetFakeExecWithScripts(calls)
-	ipsMgr := NewIpsetManager(fexec)
-	defer testutils.VerifyCalls(t, fexec, calls)
-
-	if err := ipsMgr.AddToSet(setName, testIP, util.IpsetNetHashFlag, ""); err != nil {
-		t.Errorf("TestDestroy failed @ ipsMgr.AddToSet with err %+v", err)
-	}
-
-	// Call Destroy and validate. Destroy can only work when no ipset is referenced from iptables.
-	if err := ipsMgr.destroy(); err == nil {
-		// Validate ipset is not exist when destroy can happen.
-		entry := &ipsEntry{
-			operationFlag: util.IPsetCheckListFlag,
-			set:           util.GetHashedName(setName),
-		}
-
-		if _, err := ipsMgr.run(entry); err == nil {
-			t.Errorf("TestDestroy failed @ ipsMgr.Destroy since %s still exist in kernel with err %+v", setName, err)
-		}
-	} else {
-		// Validate ipset entries are gone from flush command when destroy can not happen.
-		entry := &ipsEntry{
-			operationFlag: util.IpsetTestFlag,
-			set:           util.GetHashedName(setName),
-			spec:          []string{testIP},
-		}
-
-		if _, err := ipsMgr.run(entry); err == nil {
-			t.Errorf("TestDestroy failed @ ipsMgr.Destroy since %s still exist in ipset with err %+v", testIP, err)
-		}
-	}
-} */
 
 func TestRun(t *testing.T) {
 	var calls = []testutils.TestCmd{

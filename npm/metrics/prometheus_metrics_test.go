@@ -22,7 +22,7 @@ func TestPrometheusNodeHandler(t *testing.T) {
 	rr := httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)
 
-	assert.Contains(string(rr.Body.Bytes()), fmt.Sprintf("%s_%s", namespace, addPolicyExecTimeName))
+	assert.Contains(rr.Body.String(), fmt.Sprintf("%s_%s", namespace, addPolicyExecTimeName))
 }
 
 func TestPrometheusClusterHandler(t *testing.T) {
@@ -37,5 +37,5 @@ func TestPrometheusClusterHandler(t *testing.T) {
 	rr := httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)
 
-	assert.Contains(string(rr.Body.Bytes()), fmt.Sprintf("%s_%s", namespace, numPoliciesName))
+	assert.Contains(rr.Body.String(), fmt.Sprintf("%s_%s", namespace, numPoliciesName))
 }
