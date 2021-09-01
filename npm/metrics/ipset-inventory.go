@@ -16,17 +16,14 @@ func GetIPSetInventory(setName string) int {
 	return 0
 }
 
-// SetIPSetInventory sets the number of entries in an IPSet and updates a Prometheus metric.
+// RemoveFromIPSetInventory deletes the setName from the IPSetInventory metric.
 // When val is 0, the set will be deleted from the IPSetInventory metric.
-func SetIPSetInventory(setName string, val int) {
-	_, exists := ipsetInventoryMap[setName]
-	if exists || val != 0 {
-		ipsetInventoryMap[setName] = val
-		updateIPSetInventory(setName)
-	}
+func RemoveFromIPSetInventory(setName string) {
+	ipsetInventoryMap[setName] = 0
+	updateIPSetInventory(setName)
 }
 
-// IncIPSetInventory increases the number of entries in an IPSet and updates a Prometheus metric.
+// IncIPSetInventory increases the number of entries for setName in the IPSetInventory metric.
 func IncIPSetInventory(setName string) {
 	_, exists := ipsetInventoryMap[setName]
 	if !exists {
@@ -36,8 +33,8 @@ func IncIPSetInventory(setName string) {
 	updateIPSetInventory(setName)
 }
 
-// DecIPSetInventory decreases the number of entries in an IPSet and updates a Prometheus metric.
-// If the set has 0 members after this operation, it will be deleted from the IPSetInventory metric.
+// DecIPSetInventory decreases the number of entries for setName in the IPSetInventory metric.
+// If the set has 0 members after this operation, it will be deleted from the metric.
 func DecIPSetInventory(setName string) {
 	_, exists := ipsetInventoryMap[setName]
 	if exists {

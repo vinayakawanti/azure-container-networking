@@ -650,10 +650,10 @@ func handleMetricCountsOnDeleteFrom(setName string) {
 func handleMetricCountsOnDelete(setName string) {
 	metrics.NumIPSets.Dec()
 	metrics.NumIPSetEntries.Add(float64(-metrics.GetIPSetInventory(setName)))
-	metrics.SetIPSetInventory(setName, 0)
+	metrics.RemoveFromIPSetInventory(setName)
 }
 
 func handleMetricCountsOnFlush(setName string) {
 	metrics.NumIPSetEntries.Add(float64(-metrics.GetIPSetInventory(setName)))
-	metrics.SetIPSetInventory(setName, 0)
+	metrics.RemoveFromIPSetInventory(setName)
 }
