@@ -12,6 +12,7 @@ import (
 	"github.com/Azure/azure-container-networking/npm/util"
 	testutils "github.com/Azure/azure-container-networking/test/utils"
 	"github.com/stretchr/testify/require"
+	"k8s.io/utils/exec"
 )
 
 type expectedSetInfo struct {
@@ -513,20 +514,27 @@ func TestRunErrorWithNonZeroExitCode(t *testing.T) {
 	require.Error(t, err)
 }
 
+const debug = false // set to true only for go tests on local machine
+
 func TestDestroyNpmIpsets(t *testing.T) {
 	var (
 		testSet1Name = util.AzureNpmPrefix + "123456"
 		testSet2Name = util.AzureNpmPrefix + "56543"
 	)
 
-	var calls = []testutils.TestCmd{
-		{Cmd: []string{"ipset", "-N", "-exist", util.GetHashedName(testSet1Name), "nethash"}},
-		{Cmd: []string{"ipset", "-N", "-exist", util.GetHashedName(testSet2Name), "nethash"}},
-		{Cmd: []string{"ipset", "list"}},
+	var ipsMgr *IpsetManager
+	if debug {
+		ipsMgr = NewIpsetManager(exec.New())
+	} else {
+		var calls = []testutils.TestCmd{
+			{Cmd: []string{"ipset", "-N", "-exist", util.GetHashedName(testSet1Name), "nethash"}},
+			{Cmd: []string{"ipset", "-N", "-exist", util.GetHashedName(testSet2Name), "nethash"}},
+			{Cmd: []string{"ipset", "list"}},
+		}
+		fexec := testutils.GetFakeExecWithScripts(calls)
+		ipsMgr = NewIpsetManager(fexec)
+		defer testutils.VerifyCalls(t, fexec, calls)
 	}
-	fexec := testutils.GetFakeExecWithScripts(calls)
-	ipsMgr := NewIpsetManager(fexec)
-	defer testutils.VerifyCalls(t, fexec, calls)
 
 	execCount := resetPrometheusAndGetExecCount(t, testSet1Name, testSet2Name)
 	expectedSets := []expectedSetInfo{{0, testSet1Name}, {0, testSet1Name}}
