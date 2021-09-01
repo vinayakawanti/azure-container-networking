@@ -598,7 +598,7 @@ func (ipsMgr *IpsetManager) DestroyNpmIpsets() error {
 
 		return err
 	}
-	if reply == nil {
+	if len(reply) == 0 {
 		metrics.SendErrorLogAndMetric(util.IpsmID, "{DestroyNpmIpsets} Received empty string from ipset list while destroying azure-npm ipsets")
 		return nil
 	}
