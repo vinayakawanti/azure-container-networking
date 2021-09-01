@@ -422,7 +422,7 @@ func (c *networkPolicyController) cleanUpNetworkPolicy(netPolKey string, isSafeC
 		// 2. if the refer count is more than one we should not remove members
 		// 3. for reduced datapath operations
 		if err = c.ipsMgr.DeleteList(listKey); err != nil {
-			return fmt.Errorf("[syncAddAndUpdateNetPol] Error: creating ipset list %s with err: %v", listKey, err)
+			return fmt.Errorf("[cleanUpNetworkPolicy] Error: failed to delete ipset list %s with err: %v", listKey, err)
 		}
 	}
 
