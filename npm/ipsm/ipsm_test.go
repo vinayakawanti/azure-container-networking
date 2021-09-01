@@ -30,16 +30,19 @@ func TestCreateList(t *testing.T) {
 	ipsMgr := NewIpsetManager(fexec)
 	defer testutils.VerifyCalls(t, fexec, calls)
 
-	execCount := resetPrometheusAndGetExecCount(t)
+	execCount := resetPrometheusAndGetExecCount(t, testListName)
 	defer testPrometheusMetrics(t, 1, execCount+1, 0, expectedSetInfo{0, testListName})
 
 	err := ipsMgr.createList(testListName)
 	require.NoError(t, err)
 }
 
-func resetPrometheusAndGetExecCount(t *testing.T) int {
+func resetPrometheusAndGetExecCount(t *testing.T, setNames ...string) int {
 	metrics.NumIPSetEntries.Set(0)
 	metrics.NumIPSets.Set(0)
+	for _, setName := range setNames {
+		metrics.RemoveFromIPSetInventory(setName)
+	}
 	execCount, err := promutil.GetCountValue(metrics.AddIPSetExecTime)
 	promutil.NotifyIfErrors(t, err)
 	return execCount
@@ -85,7 +88,7 @@ func TestDeleteList(t *testing.T) {
 	ipsMgr := NewIpsetManager(fexec)
 	defer testutils.VerifyCalls(t, fexec, calls)
 
-	execCount := resetPrometheusAndGetExecCount(t)
+	execCount := resetPrometheusAndGetExecCount(t, testListName)
 	defer testPrometheusMetrics(t, 0, execCount+1, 0, expectedSetInfo{0, testListName})
 
 	err := ipsMgr.createList(testListName)
@@ -111,7 +114,7 @@ func TestAddToList(t *testing.T) {
 	ipsMgr := NewIpsetManager(fexec)
 	defer testutils.VerifyCalls(t, fexec, calls)
 
-	execCount := resetPrometheusAndGetExecCount(t)
+	execCount := resetPrometheusAndGetExecCount(t, testListName)
 	defer testPrometheusMetrics(t, 2, execCount+2, 1, expectedSetInfo{1, testListName})
 
 	err := ipsMgr.createSet(testSetName, []string{util.IpsetNetHashFlag})
@@ -147,7 +150,7 @@ func TestDeleteFromList(t *testing.T) {
 	ipsMgr := NewIpsetManager(fexec)
 	defer testutils.VerifyCalls(t, fexec, calls)
 
-	execCount := resetPrometheusAndGetExecCount(t)
+	execCount := resetPrometheusAndGetExecCount(t, setName, listName)
 	expectedSets := []expectedSetInfo{{0, setName}, {0, listName}}
 	defer testPrometheusMetrics(t, 0, execCount+2, 0, expectedSets...)
 
@@ -241,7 +244,7 @@ func TestCreateSet(t *testing.T) {
 	ipsMgr := NewIpsetManager(fexec)
 	defer testutils.VerifyCalls(t, fexec, calls)
 
-	execCount := resetPrometheusAndGetExecCount(t)
+	execCount := resetPrometheusAndGetExecCount(t, testSet1Name, testSet2Name, testSet3Name)
 	expectedSets := []expectedSetInfo{{0, testSet1Name}, {0, testSet2Name}, {1, testSet3Name}}
 	defer testPrometheusMetrics(t, 3, execCount+3, 1, expectedSets...)
 
@@ -277,7 +280,7 @@ func TestDeleteSet(t *testing.T) {
 	ipsMgr := NewIpsetManager(fexec)
 	defer testutils.VerifyCalls(t, fexec, calls)
 
-	execCount := resetPrometheusAndGetExecCount(t)
+	execCount := resetPrometheusAndGetExecCount(t, testSetName)
 	defer testPrometheusMetrics(t, 0, execCount+1, 0, expectedSetInfo{0, testSetName})
 
 	err := ipsMgr.createSet(testSetName, []string{util.IpsetNetHashFlag})
@@ -302,7 +305,7 @@ func TestAddToSet(t *testing.T) {
 	ipsMgr := NewIpsetManager(fexec)
 	defer testutils.VerifyCalls(t, fexec, calls)
 
-	execCount := resetPrometheusAndGetExecCount(t)
+	execCount := resetPrometheusAndGetExecCount(t, testSetName)
 	defer testPrometheusMetrics(t, 1, execCount+1, 5, expectedSetInfo{5, testSetName})
 
 	err := ipsMgr.AddToSet(testSetName, "1.2.3.4", util.IpsetNetHashFlag, "")
@@ -385,7 +388,7 @@ func TestDeleteFromSet(t *testing.T) {
 	ipsMgr := NewIpsetManager(fexec)
 	defer testutils.VerifyCalls(t, fexec, calls)
 
-	execCount := resetPrometheusAndGetExecCount(t)
+	execCount := resetPrometheusAndGetExecCount(t, testSetName)
 	defer testPrometheusMetrics(t, 0, execCount+1, 0, expectedSetInfo{0, testSetName}) // set is deleted when it has no members
 
 	err := ipsMgr.AddToSet(testSetName, "1.2.3.4", util.IpsetNetHashFlag, "")
@@ -425,7 +428,7 @@ func TestDeleteFromSetWithPodCache(t *testing.T) {
 	ipsMgr := NewIpsetManager(fexec)
 	defer testutils.VerifyCalls(t, fexec, calls)
 
-	execCount := resetPrometheusAndGetExecCount(t)
+	execCount := resetPrometheusAndGetExecCount(t, setname)
 	defer testPrometheusMetrics(t, 0, execCount+2, 0, expectedSetInfo{0, setname}) // set must be created again after deletion from having 0 members
 
 	if err := ipsMgr.AddToSet(setname, ip, util.IpsetNetHashFlag, pod1); err != nil {
@@ -521,12 +524,11 @@ func TestDestroyNpmIpsets(t *testing.T) {
 		{Cmd: []string{"ipset", "-N", "-exist", util.GetHashedName(testSet2Name), "nethash"}},
 		{Cmd: []string{"ipset", "list"}},
 	}
-
 	fexec := testutils.GetFakeExecWithScripts(calls)
 	ipsMgr := NewIpsetManager(fexec)
 	defer testutils.VerifyCalls(t, fexec, calls)
 
-	execCount := resetPrometheusAndGetExecCount(t)
+	execCount := resetPrometheusAndGetExecCount(t, testSet1Name, testSet2Name)
 	expectedSets := []expectedSetInfo{{0, testSet1Name}, {0, testSet1Name}}
 	defer testPrometheusMetrics(t, 0, execCount+2, 0, expectedSets...)
 
