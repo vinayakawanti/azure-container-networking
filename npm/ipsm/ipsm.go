@@ -14,6 +14,7 @@ import (
 
 	"github.com/Azure/azure-container-networking/log"
 	"github.com/Azure/azure-container-networking/npm/metrics"
+	"github.com/Azure/azure-container-networking/npm/metrics/promutil"
 	"github.com/Azure/azure-container-networking/npm/util"
 	utilexec "k8s.io/utils/exec"
 )
@@ -491,6 +492,7 @@ func (ipsMgr *IpsetManager) AddToSet(setName, ip, spec, podKey string) error {
 	if err == nil {
 		handleMetricCountsOnAddTo(setName)
 	}
+
 	// Stores the podKey as the context for this ip.
 	ipsMgr.setMap[setName].elements[ip] = podKey
 	return nil
@@ -603,31 +605,38 @@ func (ipsMgr *IpsetManager) DestroyNpmIpsets() error {
 		return nil
 	}
 
-	entry := &ipsEntry{
-		operationFlag: util.IpsetFlushFlag,
-	}
-
+	destroyFailureCount := 0
 	for _, ipsetName := range ipsetLists {
-		entry := &ipsEntry{
+		flushEntry := &ipsEntry{
 			operationFlag: util.IpsetFlushFlag,
 			set:           ipsetName,
 		}
+		_, flushError := ipsMgr.run(flushEntry)
 
-		if _, err := ipsMgr.run(entry); err != nil {
+		deleteEntry := &ipsEntry{
+			operationFlag: util.IpsetDestroyFlag,
+			set:           ipsetName,
+		}
+		_, destroyError := ipsMgr.run(deleteEntry)
+
+		if flushError != nil {
 			metrics.SendErrorLogAndMetric(util.IpsmID, "{DestroyNpmIpsets} Error: failed to flush ipset %s", ipsetName)
-		} else {
-			handleMetricCountsOnFlush(ipsetName)
+		}
+		if destroyError != nil {
+			destroyFailureCount++
+			metrics.SendErrorLogAndMetric(util.IpsmID, "{DestroyNpmIpsets} Error: failed to destroy ipset %s", ipsetName)
+		}
+		if flushError == nil || destroyError == nil {
+			metrics.NumIPSetEntries.Add(float64(-metrics.GetIPSetInventory(ipsetName)))
+			metrics.RemoveFromIPSetInventory(ipsetName)
 		}
 	}
 
-	for _, ipsetName := range ipsetLists {
-		entry.operationFlag = util.IpsetDestroyFlag
-		entry.set = ipsetName
-		if _, err := ipsMgr.run(entry); err != nil {
-			metrics.SendErrorLogAndMetric(util.IpsmID, "{DestroyNpmIpsets} Error: failed to destroy ipset %s", ipsetName)
-		} else {
-			metrics.NumIPSets.Dec()
-		}
+	originalNumIPSets, numIPSetsError := promutil.GetValue(metrics.NumIPSets)
+	if originalNumIPSets > 0 && numIPSetsError == nil {
+		metrics.NumIPSets.Set(float64(destroyFailureCount))
+	} else {
+		metrics.NumIPSets.Set(0)
 	}
 
 	return nil
