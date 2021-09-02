@@ -233,7 +233,7 @@ func TestCreateSet(t *testing.T) {
 		testSet3Name = "test-set-with-port"
 	)
 
-	var calls = []testutils.TestCmd{
+	calls := []testutils.TestCmd{
 		{Cmd: []string{"ipset", "-N", "-exist", util.GetHashedName(testSet1Name), "nethash"}},
 		{Cmd: []string{"ipset", "-N", "-exist", util.GetHashedName(testSet2Name), "nethash", "maxelem", "4294967295"}},
 		{Cmd: []string{"ipset", "-N", "-exist", util.GetHashedName(testSet3Name), "hash:ip,port"}},
@@ -272,7 +272,7 @@ func TestCreateSet(t *testing.T) {
 
 func TestDeleteSet(t *testing.T) {
 	testSetName := "test-delete-set"
-	var calls = []testutils.TestCmd{
+	calls := []testutils.TestCmd{
 		{Cmd: []string{"ipset", "-N", "-exist", util.GetHashedName(testSetName), "nethash"}},
 		{Cmd: []string{"ipset", "-X", "-exist", util.GetHashedName(testSetName)}},
 	}
@@ -293,7 +293,7 @@ func TestDeleteSet(t *testing.T) {
 
 func TestAddToSet(t *testing.T) {
 	testSetName := "test-set"
-	var calls = []testutils.TestCmd{
+	calls := []testutils.TestCmd{
 		{Cmd: []string{"ipset", "-N", "-exist", util.GetHashedName(testSetName), "nethash"}},
 		{Cmd: []string{"ipset", "-A", "-exist", util.GetHashedName(testSetName), "1.2.3.4"}},
 		{Cmd: []string{"ipset", "-A", "-exist", util.GetHashedName(testSetName), "1.2.3.4/", "nomatch"}},
@@ -333,12 +333,12 @@ func TestAddToSet(t *testing.T) {
 }
 
 func TestAddToSetWithCachePodInfo(t *testing.T) {
-	var pod1 = "pod1"
-	var setname = "test-podcache_new"
-	var ip = "10.0.2.7"
-	var pod2 = "pod2"
+	pod1 := "pod1"
+	setname := "test-podcache_new"
+	ip := "10.0.2.7"
+	pod2 := "pod2"
 
-	var calls = []testutils.TestCmd{
+	calls := []testutils.TestCmd{
 		{Cmd: []string{"ipset", "-N", "-exist", util.GetHashedName(setname), "nethash"}},
 		{Cmd: []string{"ipset", "-A", "-exist", util.GetHashedName(setname), ip}},
 		{Cmd: []string{"ipset", "-D", "-exist", util.GetHashedName(setname), ip}},
@@ -381,7 +381,7 @@ func TestAddToSetWithCachePodInfo(t *testing.T) {
 
 func TestDeleteFromSet(t *testing.T) {
 	testSetName := "test-delete-from-set"
-	var calls = []testutils.TestCmd{
+	calls := []testutils.TestCmd{
 		{Cmd: []string{"ipset", "-N", "-exist", util.GetHashedName(testSetName), "nethash"}},
 		{Cmd: []string{"ipset", "-A", "-exist", util.GetHashedName(testSetName), "1.2.3.4"}},
 		{Cmd: []string{"ipset", "-D", "-exist", util.GetHashedName(testSetName), "1.2.3.4"}},
@@ -412,12 +412,12 @@ func TestDeleteFromSet(t *testing.T) {
 }
 
 func TestDeleteFromSetWithPodCache(t *testing.T) {
-	var setname = "test-deleteset-withcache"
-	var ip = "10.0.2.8"
-	var pod1 = "pod1"
-	var pod2 = "pod2"
+	setname := "test-deleteset-withcache"
+	ip := "10.0.2.8"
+	pod1 := "pod1"
+	pod2 := "pod2"
 
-	var calls = []testutils.TestCmd{
+	calls := []testutils.TestCmd{
 		{Cmd: []string{"ipset", "-N", "-exist", util.GetHashedName(setname), "nethash"}},
 		{Cmd: []string{"ipset", "-A", "-exist", util.GetHashedName(setname), ip}},
 		{Cmd: []string{"ipset", "-D", "-exist", util.GetHashedName(setname), ip}},
@@ -481,7 +481,7 @@ func TestDeleteFromSetWithPodCache(t *testing.T) {
 }
 
 func TestRun(t *testing.T) {
-	var calls = []testutils.TestCmd{
+	calls := []testutils.TestCmd{
 		{Cmd: []string{"ipset", "-N", "-exist", util.GetHashedName("test-set"), "nethash"}},
 	}
 
@@ -500,7 +500,7 @@ func TestRun(t *testing.T) {
 }
 
 func TestRunErrorWithNonZeroExitCode(t *testing.T) {
-	var calls = []testutils.TestCmd{
+	calls := []testutils.TestCmd{
 		{Cmd: []string{"ipset", "-A", "-exist", util.GetHashedName("test-set"), "nethash"}, Stdout: "test failure", ExitCode: 2},
 	}
 
