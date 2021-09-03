@@ -632,8 +632,11 @@ func (ipsMgr *IpsetManager) DestroyNpmIpsets() error {
 		}
 	}
 
+	// When NPM restarts, Prometheus metrics will initalized at 0, but NPM IPSets may exist.
+	// Therefore, we must
 	originalNumIPSets, numIPSetsError := promutil.GetValue(metrics.NumIPSets)
 	if originalNumIPSets > 0 && numIPSetsError == nil {
+		// in this case, we should have originalNumIPSets == len(ipsetLists)
 		metrics.NumIPSets.Set(float64(destroyFailureCount))
 	} else {
 		metrics.NumIPSets.Set(0)
