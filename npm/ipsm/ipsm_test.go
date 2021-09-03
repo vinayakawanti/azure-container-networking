@@ -23,7 +23,7 @@ type expectedSetInfo struct {
 func TestCreateList(t *testing.T) {
 	testListName := "test-list"
 
-	var calls = []testutils.TestCmd{
+	calls := []testutils.TestCmd{
 		{Cmd: []string{"ipset", "-N", "-exist", util.GetHashedName(testListName), "setlist"}},
 	}
 
@@ -80,7 +80,7 @@ func testPrometheusMetrics(t *testing.T, expectedNumSets, expectedExecCount, exp
 
 func TestDeleteList(t *testing.T) {
 	testListName := "test-list"
-	var calls = []testutils.TestCmd{
+	calls := []testutils.TestCmd{
 		{Cmd: []string{"ipset", "-N", "-exist", util.GetHashedName(testListName), "setlist"}},
 		{Cmd: []string{"ipset", "-X", "-exist", util.GetHashedName(testListName)}},
 	}
@@ -105,7 +105,7 @@ func TestAddToList(t *testing.T) {
 		testListName = "test-list"
 	)
 
-	var calls = []testutils.TestCmd{
+	calls := []testutils.TestCmd{
 		{Cmd: []string{"ipset", "-N", "-exist", util.GetHashedName(testSetName), "nethash"}},
 		{Cmd: []string{"ipset", "-N", "-exist", util.GetHashedName(testListName), "setlist"}},
 		{Cmd: []string{"ipset", "-A", "-exist", util.GetHashedName(testListName), util.GetHashedName(testSetName)}},
@@ -131,7 +131,7 @@ func TestDeleteFromList(t *testing.T) {
 		listName = "test-list"
 	)
 
-	var calls = []testutils.TestCmd{
+	calls := []testutils.TestCmd{
 		{Cmd: []string{"ipset", "-N", "-exist", util.GetHashedName(setName), "nethash"}},
 		{Cmd: []string{"ipset", "list", "-exist", util.GetHashedName(setName)}},
 		{Cmd: []string{"ipset", "-N", "-exist", util.GetHashedName(listName), "setlist"}},
