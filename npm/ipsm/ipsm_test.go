@@ -100,10 +100,8 @@ func TestDeleteList(t *testing.T) {
 }
 
 func TestAddToList(t *testing.T) {
-	var (
-		testSetName  = "test-set"
-		testListName = "test-list"
-	)
+	testSetName := "test-set"
+	testListName := "test-list"
 
 	calls := []testutils.TestCmd{
 		{Cmd: []string{"ipset", "-N", "-exist", util.GetHashedName(testSetName), "nethash"}},
@@ -126,10 +124,8 @@ func TestAddToList(t *testing.T) {
 }
 
 func TestDeleteFromList(t *testing.T) {
-	var (
-		setName  = "test-set"
-		listName = "test-list"
-	)
+	setName := "test-set"
+	listName := "test-list"
 
 	calls := []testutils.TestCmd{
 		{Cmd: []string{"ipset", "-N", "-exist", util.GetHashedName(setName), "nethash"}},
@@ -227,11 +223,9 @@ func TestDeleteFromList(t *testing.T) {
 }
 
 func TestCreateSet(t *testing.T) {
-	var (
-		testSet1Name = "test-set"
-		testSet2Name = "test-set-with-maxelem"
-		testSet3Name = "test-set-with-port"
-	)
+	testSet1Name := "test-set"
+	testSet2Name := "test-set-with-maxelem"
+	testSet3Name := "test-set-with-port"
 
 	calls := []testutils.TestCmd{
 		{Cmd: []string{"ipset", "-N", "-exist", util.GetHashedName(testSet1Name), "nethash"}},
@@ -520,10 +514,8 @@ func TestRunErrorWithNonZeroExitCode(t *testing.T) {
 const debug = false // set to true only for go tests on local machine
 
 func TestDestroyNpmIpsets(t *testing.T) {
-	var (
-		testSet1Name = util.AzureNpmPrefix + "123456"
-		testSet2Name = util.AzureNpmPrefix + "56543"
-	)
+	testSet1Name := util.AzureNpmPrefix + "123456"
+	testSet2Name := util.AzureNpmPrefix + "56543"
 
 	var ipsMgr *IpsetManager
 	if debug {
