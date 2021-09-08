@@ -14,7 +14,6 @@ import (
 
 	"github.com/Azure/azure-container-networking/log"
 	"github.com/Azure/azure-container-networking/npm/metrics"
-	"github.com/Azure/azure-container-networking/npm/metrics/promutil"
 	"github.com/Azure/azure-container-networking/npm/util"
 	utilexec "k8s.io/utils/exec"
 )
@@ -175,7 +174,7 @@ func (ipsMgr *IpsetManager) deleteList(listName string) error {
 	}
 
 	delete(ipsMgr.listMap, listName)
-	handleMetricCountsOnDelete(listName)
+	metrics.DeleteIPSet(listName)
 	return nil
 }
 
@@ -205,14 +204,13 @@ func (ipsMgr *IpsetManager) run(entry *ipsEntry) (int, error) {
 }
 
 func (ipsMgr *IpsetManager) createList(listName string) error {
-	// This timer measures execution time to run this function regardless of success or failure cases
 	prometheusTimer := metrics.StartNewTimer()
 
 	if _, exists := ipsMgr.listMap[listName]; exists {
 		return nil
 	}
 
-	defer prometheusTimer.StopAndRecord(metrics.AddIPSetExecTime)
+	defer metrics.RecordIPSetExecTime(prometheusTimer) // record execution time regardless of failure
 
 	entry := &ipsEntry{
 		name:          listName,
@@ -227,7 +225,7 @@ func (ipsMgr *IpsetManager) createList(listName string) error {
 		return err
 	}
 	if err == nil {
-		handleMetricCountsOnCreate()
+		metrics.IncNumIPSets()
 	}
 
 	ipsMgr.listMap[listName] = newIpset(listName)
@@ -243,7 +241,7 @@ func (ipsMgr *IpsetManager) createSet(setName string, spec []string) error {
 		return nil
 	}
 
-	defer prometheusTimer.StopAndRecord(metrics.AddIPSetExecTime)
+	defer metrics.RecordIPSetExecTime(prometheusTimer)
 
 	entry := &ipsEntry{
 		name:          setName,
@@ -264,7 +262,7 @@ func (ipsMgr *IpsetManager) createSet(setName string, spec []string) error {
 		return err
 	}
 	if err == nil {
-		handleMetricCountsOnCreate()
+		metrics.IncNumIPSets()
 	}
 
 	ipsMgr.setMap[setName] = newIpset(setName)
@@ -292,7 +290,7 @@ func (ipsMgr *IpsetManager) deleteSet(setName string) error {
 	}
 
 	delete(ipsMgr.setMap, setName)
-	handleMetricCountsOnDelete(setName)
+	metrics.DeleteIPSet(setName)
 	return nil
 }
 
@@ -350,7 +348,7 @@ func (ipsMgr *IpsetManager) AddToList(listName string, setName string) error {
 		return fmt.Errorf("Error: failed to create ipset rules. rule: %+v, error: %v", entry, err)
 	}
 	if err == nil {
-		handleMetricCountsOnAddTo(listName)
+		metrics.AddEntryToIPSet(listName)
 	}
 
 	ipsMgr.listMap[listName].elements[setName] = ""
@@ -406,7 +404,7 @@ func (ipsMgr *IpsetManager) DeleteFromList(listName string, setName string) erro
 
 	// Now cleanup the cache. Do nothing if the specified key doesn't exist.
 	delete(ipsMgr.listMap[listName].elements, setName)
-	handleMetricCountsOnDeleteFrom(listName)
+	metrics.RemoveEntryFromIPSet(listName)
 
 	if len(ipsMgr.listMap[listName].elements) == 0 {
 		if err := ipsMgr.deleteList(listName); err != nil {
@@ -490,7 +488,7 @@ func (ipsMgr *IpsetManager) AddToSet(setName, ip, spec, podKey string) error {
 		return err
 	}
 	if err == nil {
-		handleMetricCountsOnAddTo(setName)
+		metrics.AddEntryToIPSet(setName)
 	}
 
 	// Stores the podKey as the context for this ip.
@@ -548,7 +546,7 @@ func (ipsMgr *IpsetManager) DeleteFromSet(setName, ip, podKey string) error {
 
 	// Now cleanup the cache
 	delete(ipsMgr.setMap[setName].elements, ip)
-	handleMetricCountsOnDeleteFrom(setName)
+	metrics.RemoveEntryFromIPSet(setName)
 
 	if len(ipsMgr.setMap[setName].elements) == 0 {
 		if err := ipsMgr.deleteSet(setName); err != nil {
@@ -627,40 +625,18 @@ func (ipsMgr *IpsetManager) DestroyNpmIpsets() error {
 			metrics.SendErrorLogAndMetric(util.IpsmID, "{DestroyNpmIpsets} Error: failed to destroy ipset %s", ipsetName)
 		}
 		if flushError == nil || destroyError == nil {
-			metrics.NumIPSetEntries.Add(float64(-metrics.GetIPSetInventory(ipsetName)))
-			metrics.RemoveFromIPSetInventory(ipsetName)
+			metrics.RemoveAllEntriesFromIPSet(ipsetName)
 		}
 	}
 
 	// After this function, NumIPSets should be 0 or the number of NPM IPSets that existed and failed to be destroyed.
 	// When NPM restarts, Prometheus metrics will initialize at 0, but NPM IPSets may exist.
-	originalNumIPSets, numIPSetsError := promutil.GetValue(metrics.NumIPSets)
-	if numIPSetsError == nil && originalNumIPSets > 0 {
+	if metrics.NumIPSetsIsPositive() {
 		// in this case, we should have originalNumIPSets == len(ipsetLists)
-		metrics.NumIPSets.Set(float64(destroyFailureCount))
+		metrics.SetNumIPSets(destroyFailureCount)
 	} else {
-		metrics.NumIPSets.Set(0)
+		metrics.ResetNumIPSets()
 	}
 
 	return nil
-}
-
-func handleMetricCountsOnCreate() {
-	metrics.NumIPSets.Inc()
-}
-
-func handleMetricCountsOnAddTo(setName string) {
-	metrics.NumIPSetEntries.Inc()
-	metrics.IncIPSetInventory(setName)
-}
-
-func handleMetricCountsOnDeleteFrom(setName string) {
-	metrics.NumIPSetEntries.Dec()
-	metrics.DecIPSetInventory(setName)
-}
-
-func handleMetricCountsOnDelete(setName string) {
-	metrics.NumIPSets.Dec()
-	metrics.NumIPSetEntries.Add(float64(-metrics.GetIPSetInventory(setName)))
-	metrics.RemoveFromIPSetInventory(setName)
 }

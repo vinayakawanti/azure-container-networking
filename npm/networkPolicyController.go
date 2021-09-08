@@ -304,9 +304,8 @@ func (c *networkPolicyController) initializeDefaultAzureNpmChain() error {
 
 // syncAddAndUpdateNetPol handles a new network policy or an updated network policy object triggered by add and update events
 func (c *networkPolicyController) syncAddAndUpdateNetPol(netPolObj *networkingv1.NetworkPolicy) error {
-	// This timer measures execution time to run this function regardless of success or failure cases
 	prometheusTimer := metrics.StartNewTimer()
-	defer prometheusTimer.StopAndRecord(metrics.AddPolicyExecTime)
+	defer metrics.RecordPolicyExecTime(prometheusTimer) // record execution time regardless of failure
 
 	var err error
 	netpolKey, err := cache.MetaNamespaceKeyFunc(netPolObj)
@@ -343,7 +342,7 @@ func (c *networkPolicyController) syncAddAndUpdateNetPol(netPolObj *networkingv1
 	// If error happens while applying ipsets and iptables,
 	// the key is re-queued in workqueue and process this function again, which eventually meets desired states of network policy
 	c.rawNpMap[netpolKey] = netPolObj
-	metrics.NumPolicies.Inc()
+	metrics.IncNumPolicies()
 
 	sets, namedPorts, lists, ingressIPCidrs, egressIPCidrs, iptEntries := translatePolicy(netPolObj)
 	for _, set := range sets {
@@ -437,7 +436,7 @@ func (c *networkPolicyController) cleanUpNetworkPolicy(netPolKey string, isSafeC
 
 	// Sucess to clean up ipset and iptables operations in kernel and delete the cached network policy from RawNpMap
 	delete(c.rawNpMap, netPolKey)
-	metrics.NumPolicies.Dec()
+	metrics.DecNumPolicies()
 
 	// If there is no cached network policy in RawNPMap anymore and no immediate network policy to process, start cleaning up default azure npm chains
 	// However, UninitNpmChains function is failed which left failed states and will not retry, but functionally it is ok.
