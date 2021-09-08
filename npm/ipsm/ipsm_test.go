@@ -23,9 +23,10 @@ type expectedSetInfo struct {
 
 var debug = flag.Bool("debug", false, "When true, allows testing of DestroyNpmIpsets() on local machine.")
 
-func TestCreateList(t *testing.T) {
-	testListName := "test-list"
+const testListName = "test-list"
+const testSetName = "test-set"
 
+func TestCreateList(t *testing.T) {
 	calls := []testutils.TestCmd{
 		{Cmd: []string{"ipset", "-N", "-exist", util.GetHashedName(testListName), "setlist"}},
 	}
@@ -78,7 +79,6 @@ func testPrometheusMetrics(t *testing.T, expectedNumSets, expectedExecCount, exp
 }
 
 func TestDeleteList(t *testing.T) {
-	testListName := "test-list"
 	calls := []testutils.TestCmd{
 		{Cmd: []string{"ipset", "-N", "-exist", util.GetHashedName(testListName), "setlist"}},
 		{Cmd: []string{"ipset", "-X", "-exist", util.GetHashedName(testListName)}},
@@ -99,9 +99,6 @@ func TestDeleteList(t *testing.T) {
 }
 
 func TestAddToList(t *testing.T) {
-	testSetName := "test-set"
-	testListName := "test-list"
-
 	calls := []testutils.TestCmd{
 		{Cmd: []string{"ipset", "-N", "-exist", util.GetHashedName(testSetName), "nethash"}},
 		{Cmd: []string{"ipset", "-N", "-exist", util.GetHashedName(testListName), "setlist"}},
@@ -123,21 +120,18 @@ func TestAddToList(t *testing.T) {
 }
 
 func TestDeleteFromList(t *testing.T) {
-	setName := "test-set"
-	listName := "test-list"
-
 	calls := []testutils.TestCmd{
-		{Cmd: []string{"ipset", "-N", "-exist", util.GetHashedName(setName), "nethash"}},
-		{Cmd: []string{"ipset", "list", "-exist", util.GetHashedName(setName)}},
-		{Cmd: []string{"ipset", "-N", "-exist", util.GetHashedName(listName), "setlist"}},
-		{Cmd: []string{"ipset", "-A", "-exist", util.GetHashedName(listName), util.GetHashedName(setName)}},
-		{Cmd: []string{"ipset", "test", "-exist", util.GetHashedName(listName), util.GetHashedName(setName)}},
-		{Cmd: []string{"ipset", "-D", "-exist", util.GetHashedName(listName), util.GetHashedName(setName)}},
-		{Cmd: []string{"ipset", "-X", "-exist", util.GetHashedName(listName)}},
-		{Cmd: []string{"ipset", "test", "-exist", util.GetHashedName(listName), util.GetHashedName(setName)}, Stdout: "ipset still exists", ExitCode: 2},
-		{Cmd: []string{"ipset", "list", "-exist", util.GetHashedName(listName)}, Stdout: "ipset still exists", ExitCode: 2},
-		{Cmd: []string{"ipset", "-X", "-exist", util.GetHashedName(setName)}},
-		{Cmd: []string{"ipset", "list", "-exist", util.GetHashedName(setName)}, Stdout: "ipset still exists", ExitCode: 2},
+		{Cmd: []string{"ipset", "-N", "-exist", util.GetHashedName(testSetName), "nethash"}},
+		{Cmd: []string{"ipset", "list", "-exist", util.GetHashedName(testSetName)}},
+		{Cmd: []string{"ipset", "-N", "-exist", util.GetHashedName(testListName), "setlist"}},
+		{Cmd: []string{"ipset", "-A", "-exist", util.GetHashedName(testListName), util.GetHashedName(testSetName)}},
+		{Cmd: []string{"ipset", "test", "-exist", util.GetHashedName(testListName), util.GetHashedName(testSetName)}},
+		{Cmd: []string{"ipset", "-D", "-exist", util.GetHashedName(testListName), util.GetHashedName(testSetName)}},
+		{Cmd: []string{"ipset", "-X", "-exist", util.GetHashedName(testListName)}},
+		{Cmd: []string{"ipset", "test", "-exist", util.GetHashedName(testListName), util.GetHashedName(testSetName)}, Stdout: "ipset still exists", ExitCode: 2},
+		{Cmd: []string{"ipset", "list", "-exist", util.GetHashedName(testListName)}, Stdout: "ipset still exists", ExitCode: 2},
+		{Cmd: []string{"ipset", "-X", "-exist", util.GetHashedName(testSetName)}},
+		{Cmd: []string{"ipset", "list", "-exist", util.GetHashedName(testSetName)}, Stdout: "ipset still exists", ExitCode: 2},
 	}
 
 	fexec := testutils.GetFakeExecWithScripts(calls)
@@ -147,74 +141,74 @@ func TestDeleteFromList(t *testing.T) {
 	defer testutils.VerifyCalls(t, fexec, calls)
 
 	execCount := resetPrometheusAndGetExecCount(t)
-	expectedSets := []expectedSetInfo{{0, setName}, {0, listName}}
+	expectedSets := []expectedSetInfo{{0, testSetName}, {0, testListName}}
 	defer testPrometheusMetrics(t, 0, execCount+2, 0, expectedSets...)
 
 	// Create set and validate set is created.
-	err := ipsMgr.createSet(setName, []string{util.IpsetNetHashFlag})
+	err := ipsMgr.createSet(testSetName, []string{util.IpsetNetHashFlag})
 	require.NoError(t, err)
 
 	entry := &ipsEntry{
 		operationFlag: util.IPsetCheckListFlag,
-		set:           util.GetHashedName(setName),
+		set:           util.GetHashedName(testSetName),
 	}
 
 	_, err = ipsMgr.run(entry)
 	require.NoError(t, err)
 
 	// Create list, add set to list and validate set is in the list.
-	err = ipsMgr.AddToList(listName, setName)
+	err = ipsMgr.AddToList(testListName, testSetName)
 	require.NoError(t, err)
 
 	entry = &ipsEntry{
 		operationFlag: util.IpsetTestFlag,
-		set:           util.GetHashedName(listName),
-		spec:          []string{util.GetHashedName(setName)},
+		set:           util.GetHashedName(testListName),
+		spec:          []string{util.GetHashedName(testSetName)},
 	}
 
 	_, err = ipsMgr.run(entry)
 	require.NoError(t, err)
 
 	// Delete set from list and validate set is not in list anymore.
-	err = ipsMgr.DeleteFromList(listName, setName)
+	err = ipsMgr.DeleteFromList(testListName, testSetName)
 	require.NoError(t, err)
 
 	// Delete set from list and validate set is not in list anymore.
-	err = ipsMgr.DeleteFromList(listName, "nonexistentsetname")
+	err = ipsMgr.DeleteFromList(testListName, "nonexistentsetname")
 	require.NoError(t, err)
 
 	// Delete set from list, but list isn't of list type
-	err = ipsMgr.DeleteFromList(setName, setName)
+	err = ipsMgr.DeleteFromList(testSetName, testSetName)
 	require.NoError(t, err)
 
 	entry = &ipsEntry{
 		operationFlag: util.IpsetTestFlag,
-		set:           util.GetHashedName(listName),
-		spec:          []string{util.GetHashedName(setName)},
+		set:           util.GetHashedName(testListName),
+		spec:          []string{util.GetHashedName(testSetName)},
 	}
 
 	_, err = ipsMgr.run(entry)
 	require.Error(t, err)
 
 	// Delete List and validate list is not exist.
-	err = ipsMgr.deleteSet(listName)
+	err = ipsMgr.deleteSet(testListName)
 	require.NoError(t, err)
 
 	entry = &ipsEntry{
 		operationFlag: util.IPsetCheckListFlag,
-		set:           util.GetHashedName(listName),
+		set:           util.GetHashedName(testListName),
 	}
 
 	_, err = ipsMgr.run(entry)
 	require.Error(t, err)
 
 	// Delete set and validate set is not exist.
-	err = ipsMgr.deleteSet(setName)
+	err = ipsMgr.deleteSet(testSetName)
 	require.NoError(t, err)
 
 	entry = &ipsEntry{
 		operationFlag: util.IPsetCheckListFlag,
-		set:           util.GetHashedName(setName),
+		set:           util.GetHashedName(testSetName),
 	}
 
 	_, err = ipsMgr.run(entry)
@@ -285,7 +279,6 @@ func TestDeleteSet(t *testing.T) {
 }
 
 func TestAddToSet(t *testing.T) {
-	testSetName := "test-set"
 	calls := []testutils.TestCmd{
 		{Cmd: []string{"ipset", "-N", "-exist", util.GetHashedName(testSetName), "nethash"}},
 		{Cmd: []string{"ipset", "-A", "-exist", util.GetHashedName(testSetName), "1.2.3.4"}},
@@ -398,7 +391,7 @@ func TestDeleteFromSet(t *testing.T) {
 	err = ipsMgr.DeleteFromSet(testSetName, "1.2.3.4", "")
 	require.NoError(t, err)
 
-	// After deleting the only entry, "1.2.3.4" from "test-set", "test-set" ipset won't exist
+	// After deleting the only entry, "1.2.3.4" from testSetName, testSetName ipset won't exist
 	if _, exists := ipsMgr.setMap[testSetName]; exists {
 		t.Errorf("TestDeleteFromSet failed @ ipsMgr.DeleteFromSet")
 	}
@@ -475,7 +468,7 @@ func TestDeleteFromSetWithPodCache(t *testing.T) {
 
 func TestRun(t *testing.T) {
 	calls := []testutils.TestCmd{
-		{Cmd: []string{"ipset", "-N", "-exist", util.GetHashedName("test-set"), "nethash"}},
+		{Cmd: []string{"ipset", "-N", "-exist", util.GetHashedName(testSetName), "nethash"}},
 	}
 
 	fexec := testutils.GetFakeExecWithScripts(calls)
@@ -484,7 +477,7 @@ func TestRun(t *testing.T) {
 
 	entry := &ipsEntry{
 		operationFlag: util.IpsetCreationFlag,
-		set:           util.GetHashedName("test-set"),
+		set:           util.GetHashedName(testSetName),
 		spec:          []string{util.IpsetNetHashFlag},
 	}
 	if _, err := ipsMgr.run(entry); err != nil {
@@ -494,7 +487,7 @@ func TestRun(t *testing.T) {
 
 func TestRunErrorWithNonZeroExitCode(t *testing.T) {
 	calls := []testutils.TestCmd{
-		{Cmd: []string{"ipset", "-A", "-exist", util.GetHashedName("test-set"), "nethash"}, Stdout: "test failure", ExitCode: 2},
+		{Cmd: []string{"ipset", "-A", "-exist", util.GetHashedName(testSetName), "nethash"}, Stdout: "test failure", ExitCode: 2},
 	}
 
 	fexec := testutils.GetFakeExecWithScripts(calls)
@@ -503,7 +496,7 @@ func TestRunErrorWithNonZeroExitCode(t *testing.T) {
 
 	entry := &ipsEntry{
 		operationFlag: util.IpsetAppendFlag,
-		set:           util.GetHashedName("test-set"),
+		set:           util.GetHashedName(testSetName),
 		spec:          []string{util.IpsetNetHashFlag},
 	}
 	_, err := ipsMgr.run(entry)

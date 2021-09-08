@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/Azure/azure-container-networking/log"
@@ -168,5 +169,8 @@ func getDTOMetric(collector prometheus.Collector) (*dto.Metric, error) {
 	collector.Collect(channel)
 	metric := &dto.Metric{}
 	err := (<-channel).Write(metric)
+	if err != nil {
+		err = fmt.Errorf("error while extracting Prometheus metric value: %w", err)
+	}
 	return metric, err
 }
