@@ -3,7 +3,6 @@
 package ipsm
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"testing"
@@ -20,8 +19,6 @@ const (
 	testSetName  = "test-set"
 	testListName = "test-list"
 )
-
-var debug = flag.Bool("debug", false, "When true, allows testing of DestroyNpmIpsets() on local machine.")
 
 type expectedSetInfo struct {
 	val  int
@@ -509,19 +506,7 @@ func TestDestroyNpmIpsets(t *testing.T) {
 	testSet1Name := util.AzureNpmPrefix + "123456"
 	testSet2Name := util.AzureNpmPrefix + "56543"
 
-	var ipsMgr *IpsetManager
-	if *debug {
-		ipsMgr = NewIpsetManager(exec.New())
-	} else {
-		calls := []testutils.TestCmd{
-			{Cmd: []string{"ipset", "-N", "-exist", util.GetHashedName(testSet1Name), "nethash"}},
-			{Cmd: []string{"ipset", "-N", "-exist", util.GetHashedName(testSet2Name), "nethash"}},
-			{Cmd: []string{"ipset", "list"}},
-		}
-		fexec := testutils.GetFakeExecWithScripts(calls)
-		ipsMgr = NewIpsetManager(fexec)
-		defer testutils.VerifyCalls(t, fexec, calls)
-	}
+	ipsMgr := NewIpsetManager(exec.New())
 
 	execCount := resetPrometheusAndGetExecCount(t)
 	expectedSets := []expectedSetInfo{{0, testSet1Name}, {0, testSet1Name}}
