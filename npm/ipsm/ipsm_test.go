@@ -3,6 +3,7 @@
 package ipsm
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"testing"
@@ -19,6 +20,8 @@ type expectedSetInfo struct {
 	val  int
 	name string
 }
+
+var debug = flag.Bool("debug", false, "When true, allows testing of DestroyNpmIpsets() on local machine.")
 
 func TestCreateList(t *testing.T) {
 	testListName := "test-list"
@@ -507,14 +510,12 @@ func TestRunErrorWithNonZeroExitCode(t *testing.T) {
 	require.Error(t, err)
 }
 
-const debug = false // set to true only for go tests on local machine
-
 func TestDestroyNpmIpsets(t *testing.T) {
 	testSet1Name := util.AzureNpmPrefix + "123456"
 	testSet2Name := util.AzureNpmPrefix + "56543"
 
 	var ipsMgr *IpsetManager
-	if debug {
+	if *debug {
 		ipsMgr = NewIpsetManager(exec.New())
 	} else {
 		calls := []testutils.TestCmd{
