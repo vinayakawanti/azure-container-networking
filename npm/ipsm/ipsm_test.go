@@ -16,15 +16,17 @@ import (
 	"k8s.io/utils/exec"
 )
 
+const (
+	testSetName  = "test-set"
+	testListName = "test-list"
+)
+
+var debug = flag.Bool("debug", false, "When true, allows testing of DestroyNpmIpsets() on local machine.")
+
 type expectedSetInfo struct {
 	val  int
 	name string
 }
-
-var debug = flag.Bool("debug", false, "When true, allows testing of DestroyNpmIpsets() on local machine.")
-
-const testListName = "test-list"
-const testSetName = "test-set"
 
 func TestCreateList(t *testing.T) {
 	calls := []testutils.TestCmd{
