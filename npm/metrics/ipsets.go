@@ -28,8 +28,10 @@ func ResetNumIPSets() {
 }
 
 // NumIPSetsIsPositive is true when the number of IPSets is positive.
+// This function is slow.
+// TODO might be more efficient to keep track of the count
 func NumIPSetsIsPositive() bool {
-	val, err := GetNumIPSets() // TODO might be more efficient to keep track of the count
+	val, err := GetNumIPSets()
 	return val > 0 && err != nil
 }
 
