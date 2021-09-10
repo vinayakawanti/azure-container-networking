@@ -36,11 +36,11 @@ const (
 	addPolicyExecTimeName = "add_policy_exec_time"
 	addPolicyExecTimeHelp = "Execution time in milliseconds for adding a network policy"
 
-	numIPTableRulesName = "num_iptables_rules"
-	numIPTableRulesHelp = "The number of current IPTable rules for this node"
+	numACLRulesName = "num_iptables_rules"
+	numACLRulesHelp = "The number of current IPTable rules for this node"
 
-	addIPTableRuleExecTimeName = "add_iptables_rule_exec_time"
-	addIPTableRuleExecTimeHelp = "Execution time in milliseconds for adding an IPTable rule to a chain"
+	addACLRuleExecTimeName = "add_iptables_rule_exec_time"
+	addACLRuleExecTimeHelp = "Execution time in milliseconds for adding an IPTable rule to a chain"
 
 	numIPSetsName = "num_ipsets"
 	numIPSetsHelp = "The number of current IP sets for this node"
@@ -68,8 +68,8 @@ func InitializeAll() {
 	if !haveInitialized {
 		numPolicies = createGauge(numPoliciesName, numPoliciesHelp, false)
 		addPolicyExecTime = createSummary(addPolicyExecTimeName, addPolicyExecTimeHelp, true)
-		numACLRules = createGauge(numIPTableRulesName, numIPTableRulesHelp, false)
-		addACLRuleExecTime = createSummary(addIPTableRuleExecTimeName, addIPTableRuleExecTimeHelp, true)
+		numACLRules = createGauge(numACLRulesName, numACLRulesHelp, false)
+		addACLRuleExecTime = createSummary(addACLRuleExecTimeName, addACLRuleExecTimeHelp, true)
 		numIPSets = createGauge(numIPSetsName, numIPSetsHelp, false)
 		addIPSetExecTime = createSummary(addIPSetExecTimeName, addIPSetExecTimeHelp, true)
 		numIPSetEntries = createGauge(numIPSetEntriesName, numIPSetEntriesHelp, false)
