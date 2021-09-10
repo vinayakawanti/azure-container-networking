@@ -22,13 +22,13 @@ func RecordACLRuleExecTime(timer *Timer) {
 }
 
 // GetNumACLRules returns the number of ACL rules.
-// This function is slow and should only be used for testing.
+// This function is slow.
 func GetNumACLRules() (int, error) {
 	return getValue(numACLRules)
 }
 
 // GetACLRuleExecCount returns the number of observations for execution time of adding ACL rules.
-// This function is slow and should only be used for testing.
+// This function is slow.
 func GetACLRuleExecCount() (int, error) {
 	return getCountValue(addACLRuleExecTime)
 }

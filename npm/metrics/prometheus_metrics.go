@@ -139,7 +139,7 @@ func createSummary(name string, helpMessage string, isNodeLevel bool) prometheus
 }
 
 // getValue returns a Gauge metric's value.
-// This should only be used for testing.
+// This function is slow.
 func getValue(gaugeMetric prometheus.Gauge) (int, error) {
 	dtoMetric, err := getDTOMetric(gaugeMetric)
 	if err != nil {
@@ -149,13 +149,13 @@ func getValue(gaugeMetric prometheus.Gauge) (int, error) {
 }
 
 // getVecValue Gauge Vec metric's value, or 0 if the label doesn't exist for the metric.
-// This should only be used for testing.
+// This function is slow.
 func getVecValue(gaugeVecMetric *prometheus.GaugeVec, labels prometheus.Labels) (int, error) {
 	return getValue(gaugeVecMetric.With(labels))
 }
 
 // getCountValue the number of times a Summary metric has recorded an observation.
-// This should only be used for testing.
+// This function is slow.
 func getCountValue(summaryMetric prometheus.Summary) (int, error) {
 	dtoMetric, err := getDTOMetric(summaryMetric)
 	if err != nil {

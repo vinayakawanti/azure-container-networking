@@ -80,26 +80,26 @@ func ResetIPSetEntries() {
 }
 
 // GetNumIPSets returns the number of IPSets.
-// This function is slow and should only be used for testing.
+// This function is slow.
 func GetNumIPSets() (int, error) {
 	return getValue(numIPSets)
 }
 
 // GetNumIPSetEntries returns the total number of IPSet entries.
-// This function is slow and should only be used for testing.
+// This function is slow.
 func GetNumIPSetEntries() (int, error) {
 	return getValue(numIPSetEntries)
 }
 
 // GetNumEntriesForIPSet returns the number entries for IPSet setName.
-// This function is slow and should only be used for testing.
+// This function is slow.
 func GetNumEntriesForIPSet(setName string) (int, error) {
 	labels := getIPSetInventoryLabels(setName)
 	return getVecValue(ipsetInventory, labels)
 }
 
 // GetIPSetExecCount returns the number of observations for execution time of adding IPSets.
-// This function is slow and should only be used for testing.
+// This function is slow.
 func GetIPSetExecCount() (int, error) {
 	return getCountValue(addIPSetExecTime)
 }

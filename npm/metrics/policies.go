@@ -22,13 +22,13 @@ func RecordPolicyExecTime(timer *Timer) {
 }
 
 // GetNumPolicies returns the number of policies.
-// This function is slow and should only be used for testing.
+// This function is slow.
 func GetNumPolicies() (int, error) {
 	return getValue(numPolicies)
 }
 
 // GetPolicyExecCount returns the number of observations for execution time of adding policies.
-// This function is slow and should only be used for testing.
+// This function is slow.
 func GetPolicyExecCount() (int, error) {
 	return getCountValue(addPolicyExecTime)
 }
