@@ -496,7 +496,7 @@ func (nm *networkManager) UpdateEndpoint(networkID string, existingEpInfo *Endpo
 		return err
 	}
 
-	_, err = nw.updateEndpoint(existingEpInfo, targetEpInfo)
+	_, err = nm.updateEndpoint(nw, existingEpInfo, targetEpInfo)
 	if err != nil {
 		return err
 	}

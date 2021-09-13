@@ -321,7 +321,7 @@ func deleteRoutes(nl netlink.Netlink, interfaceName string, routes []RouteInfo) 
 }
 
 // updateEndpointImpl updates an existing endpoint in the network.
-func (nw *network) updateEndpointImpl(existingEpInfo *EndpointInfo, targetEpInfo *EndpointInfo) (*endpoint, error) {
+func (nm *networkManager) updateEndpointImpl(nw *network, existingEpInfo *EndpointInfo, targetEpInfo *EndpointInfo) (*endpoint, error) {
 	var ns *Namespace
 	var ep *endpoint
 	var err error
@@ -365,7 +365,7 @@ func (nw *network) updateEndpointImpl(existingEpInfo *EndpointInfo, targetEpInfo
 	}
 
 	log.Printf("[updateEndpointImpl] Going to update routes in netns %v.", netns)
-	if err = updateRoutes(existingEpInfo, targetEpInfo); err != nil {
+	if err = updateRoutes(nm.netlink, existingEpInfo, targetEpInfo); err != nil {
 		return nil, err
 	}
 

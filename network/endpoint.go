@@ -255,7 +255,7 @@ func (ep *endpoint) detach() error {
 }
 
 // updateEndpoint updates an existing endpoint in the network.
-func (nw *network) updateEndpoint(exsitingEpInfo *EndpointInfo, targetEpInfo *EndpointInfo) (*endpoint, error) {
+func (nm *networkManager) updateEndpoint(nw *network, exsitingEpInfo *EndpointInfo, targetEpInfo *EndpointInfo) (*endpoint, error) {
 	var err error
 
 	log.Printf("[net] Updating existing endpoint [%+v] in network %v to target [%+v].", exsitingEpInfo, nw.Id, targetEpInfo)
@@ -275,7 +275,7 @@ func (nw *network) updateEndpoint(exsitingEpInfo *EndpointInfo, targetEpInfo *En
 	log.Printf("[net] Retrieved endpoint to update %+v.", ep)
 
 	// Call the platform implementation.
-	ep, err = nw.updateEndpointImpl(exsitingEpInfo, targetEpInfo)
+	ep, err = nm.updateEndpointImpl(nw, exsitingEpInfo, targetEpInfo)
 	if err != nil {
 		return nil, err
 	}
