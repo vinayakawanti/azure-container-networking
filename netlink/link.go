@@ -1,6 +1,7 @@
 // Copyright 2017 Microsoft. All rights reserved.
 // MIT License
 
+//go:build linux
 // +build linux
 
 package netlink
@@ -325,6 +326,7 @@ func SetLinkAddress(ifName string, hwAddress net.HardwareAddr) error {
 }
 
 // SetLinkPromisc sets the promiscuous mode of a network interface.
+// TODO do we need this function, not used anywhere currently
 func SetLinkPromisc(ifName string, on bool) error {
 	s, err := getSocket()
 	if err != nil {
