@@ -17,6 +17,7 @@ type LinuxBridgeClient struct {
 	bridgeName        string
 	hostInterfaceName string
 	nwInfo            NetworkInfo
+	netlink           netlink.Netlink
 }
 
 func NewLinuxBridgeClient(bridgeName string, hostInterfaceName string, nwInfo NetworkInfo) *LinuxBridgeClient {
@@ -24,6 +25,8 @@ func NewLinuxBridgeClient(bridgeName string, hostInterfaceName string, nwInfo Ne
 		bridgeName:        bridgeName,
 		nwInfo:            nwInfo,
 		hostInterfaceName: hostInterfaceName,
+		// TODO take in netlink as input
+		netlink: netlink.NewNetlink(),
 	}
 
 	return client
@@ -39,7 +42,7 @@ func (client *LinuxBridgeClient) CreateBridge() error {
 		},
 	}
 
-	if err := netlink.AddLink(&link); err != nil {
+	if err := client.netlink.AddLink(&link); err != nil {
 		return err
 	}
 
@@ -48,13 +51,13 @@ func (client *LinuxBridgeClient) CreateBridge() error {
 
 func (client *LinuxBridgeClient) DeleteBridge() error {
 	// Disconnect external interface from its bridge.
-	err := netlink.SetLinkMaster(client.hostInterfaceName, "")
+	err := client.netlink.SetLinkMaster(client.hostInterfaceName, "")
 	if err != nil {
 		log.Printf("[net] Failed to disconnect interface %v from bridge, err:%v.", client.hostInterfaceName, err)
 	}
 
 	// Delete the bridge.
-	err = netlink.DeleteLink(client.bridgeName)
+	err = client.netlink.DeleteLink(client.bridgeName)
 	if err != nil {
 		log.Printf("[net] Failed to delete bridge %v, err:%v.", client.bridgeName, err)
 	}
@@ -141,11 +144,11 @@ func (client *LinuxBridgeClient) DeleteL2Rules(extIf *externalInterface) {
 }
 
 func (client *LinuxBridgeClient) SetBridgeMasterToHostInterface() error {
-	return netlink.SetLinkMaster(client.hostInterfaceName, client.bridgeName)
+	return client.netlink.SetLinkMaster(client.hostInterfaceName, client.bridgeName)
 }
 
 func (client *LinuxBridgeClient) SetHairpinOnHostInterface(enable bool) error {
-	return netlink.SetLinkHairpin(client.hostInterfaceName, enable)
+	return client.netlink.SetLinkHairpin(client.hostInterfaceName, enable)
 }
 
 func (client *LinuxBridgeClient) setBrouteRedirect(action string) error {

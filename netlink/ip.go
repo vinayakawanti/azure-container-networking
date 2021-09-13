@@ -24,19 +24,8 @@ const (
 	RTPROT_KERNEL = 2
 )
 
-// GetIpAddressFamily returns the address family of an IP address.
-func (_ Netlink) GetIpAddressFamily(ip net.IP) int {
-	if len(ip) <= net.IPv4len {
-		return unix.AF_INET
-	}
-	if ip.To4() != nil {
-		return unix.AF_INET
-	}
-	return unix.AF_INET6
-}
-
 // setIpAddress sends an IP address set request.
-func (n Netlink) setIpAddress(ifName string, ipAddress net.IP, ipNet *net.IPNet, add bool) error {
+func (Netlink) setIpAddress(ifName string, ipAddress net.IP, ipNet *net.IPNet, add bool) error {
 	var msgType, flags int
 
 	s, err := getSocket()
@@ -59,7 +48,7 @@ func (n Netlink) setIpAddress(ifName string, ipAddress net.IP, ipNet *net.IPNet,
 
 	req := newRequest(msgType, flags)
 
-	family := n.GetIpAddressFamily(ipAddress)
+	family := GetIpAddressFamily(ipAddress)
 
 	ifAddr := newIfAddrMsg(family)
 	ifAddr.Index = uint32(iface.Index)
@@ -151,7 +140,7 @@ func deserializeRoute(msg *message) (*Route, error) {
 }
 
 // GetIpRoute returns a list of IP routes matching the given filter.
-func (n Netlink) GetIpRoute(filter *Route) ([]*Route, error) {
+func (Netlink) GetIpRoute(filter *Route) ([]*Route, error) {
 	s, err := getSocket()
 	if err != nil {
 		return nil, err
@@ -291,11 +280,22 @@ func setIpRoute(route *Route, add bool) error {
 }
 
 // AddIpRoute adds an IP route to the route table.
-func AddIpRoute(route *Route) error {
+func (Netlink) AddIpRoute(route *Route) error {
 	return setIpRoute(route, true)
 }
 
 // DeleteIpRoute deletes an IP route from the route table.
-func DeleteIpRoute(route *Route) error {
+func (Netlink) DeleteIpRoute(route *Route) error {
 	return setIpRoute(route, false)
+}
+
+// GetIpAddressFamily returns the address family of an IP address.
+func GetIpAddressFamily(ip net.IP) int {
+	if len(ip) <= net.IPv4len {
+		return unix.AF_INET
+	}
+	if ip.To4() != nil {
+		return unix.AF_INET
+	}
+	return unix.AF_INET6
 }

@@ -56,7 +56,7 @@ func (nm *networkManager) newNetworkImpl(nwInfo *NetworkInfo, extIf *externalInt
 
 	switch nwInfo.Mode {
 	case opModeTunnel:
-		handleCommonOptions(extIf.Name, nwInfo)
+		nm.handleCommonOptions(extIf.Name, nwInfo)
 		fallthrough
 	case opModeBridge:
 		log.Printf("create bridge")
@@ -67,9 +67,9 @@ func (nm *networkManager) newNetworkImpl(nwInfo *NetworkInfo, extIf *externalInt
 		if opt != nil && opt[VlanIDKey] != nil {
 			vlanid, _ = strconv.Atoi(opt[VlanIDKey].(string))
 		}
-		handleCommonOptions(extIf.BridgeName, nwInfo)
+		nm.handleCommonOptions(extIf.BridgeName, nwInfo)
 	case opModeTransparent:
-		handleCommonOptions(extIf.Name, nwInfo)
+		nm.handleCommonOptions(extIf.Name, nwInfo)
 	default:
 		return nil, errNetworkModeInvalid
 	}
@@ -88,17 +88,17 @@ func (nm *networkManager) newNetworkImpl(nwInfo *NetworkInfo, extIf *externalInt
 	return nw, nil
 }
 
-func handleCommonOptions(ifname string, nwInfo *NetworkInfo) error {
+func (nm *networkManager) handleCommonOptions(ifname string, nwInfo *NetworkInfo) error {
 	var err error
 	if routes, exists := nwInfo.Options[RoutesKey]; exists {
-		err = AddRoutes(ifname, routes.([]RouteInfo))
+		err = nm.addBridgeRoutes(ifname, routes.([]RouteInfo))
 		if err != nil {
 			return err
 		}
 	}
 
 	if iptcmds, exists := nwInfo.Options[IPTablesKey]; exists {
-		err = AddToIptables(iptcmds.([]iptables.IPTableEntry))
+		err = nm.addToIptables(iptcmds.([]iptables.IPTableEntry))
 		if err != nil {
 			return err
 		}
@@ -128,7 +128,7 @@ func (nm *networkManager) deleteNetworkImpl(nw *network) error {
 //  SaveIPConfig saves the IP configuration of an interface.
 func (nm *networkManager) saveIPConfig(hostIf *net.Interface, extIf *externalInterface) error {
 	// Save the default routes on the interface.
-	routes, err := netlink.GetIpRoute(&netlink.Route{Dst: &net.IPNet{}, LinkIndex: hostIf.Index})
+	routes, err := nm.netlink.GetIpRoute(&netlink.Route{Dst: &net.IPNet{}, LinkIndex: hostIf.Index})
 	if err != nil {
 		log.Printf("[net] Failed to query routes: %v.", err)
 		return err
@@ -163,7 +163,7 @@ func (nm *networkManager) saveIPConfig(hostIf *net.Interface, extIf *externalInt
 
 		log.Printf("[net] Deleting IP address %v from interface %v.", ipNet, hostIf.Name)
 
-		err = netlink.DeleteIpAddress(hostIf.Name, ipAddr, ipNet)
+		err = nm.netlink.DeleteIpAddress(hostIf.Name, ipAddr, ipNet)
 		if err != nil {
 			break
 		}
@@ -280,7 +280,7 @@ func (nm *networkManager) applyIPConfig(extIf *externalInterface, targetIf *net.
 	for _, addr := range extIf.IPAddresses {
 		log.Printf("[net] Adding IP address %v to interface %v.", addr, targetIf.Name)
 
-		err := netlink.AddIpAddress(targetIf.Name, addr.IP, addr)
+		err := nm.netlink.AddIpAddress(targetIf.Name, addr.IP, addr)
 		if err != nil && !strings.Contains(strings.ToLower(err.Error()), "file exists") {
 			log.Printf("[net] Failed to add IP address %v: %v.", addr, err)
 			return err
@@ -293,7 +293,7 @@ func (nm *networkManager) applyIPConfig(extIf *externalInterface, targetIf *net.
 
 		log.Printf("[net] Adding IP route %+v.", route)
 
-		err := netlink.AddIpRoute((*netlink.Route)(route))
+		err := nm.netlink.AddIpRoute((*netlink.Route)(route))
 		if err != nil {
 			log.Printf("[net] Failed to add IP route %v: %v.", route, err)
 			return err
@@ -424,7 +424,7 @@ func (nm *networkManager) connectExternalInterface(extIf *externalInterface, nwI
 
 	// External interface down.
 	log.Printf("[net] Setting link %v state down.", hostIf.Name)
-	err = netlink.SetLinkState(hostIf.Name, false)
+	err = nm.netlink.SetLinkState(hostIf.Name, false)
 	if err != nil {
 		return err
 	}
@@ -437,14 +437,14 @@ func (nm *networkManager) connectExternalInterface(extIf *externalInterface, nwI
 
 	// External interface up.
 	log.Printf("[net] Setting link %v state up.", hostIf.Name)
-	err = netlink.SetLinkState(hostIf.Name, true)
+	err = nm.netlink.SetLinkState(hostIf.Name, true)
 	if err != nil {
 		return err
 	}
 
 	// Bridge up.
 	log.Printf("[net] Setting link %v state up.", bridgeName)
-	err = netlink.SetLinkState(bridgeName, true)
+	err = nm.netlink.SetLinkState(bridgeName, true)
 	if err != nil {
 		return err
 	}
@@ -535,7 +535,7 @@ func (nm *networkManager) disconnectExternalInterface(extIf *externalInterface, 
 	log.Printf("[net] Disconnected interface %v.", extIf.Name)
 }
 
-func AddToIptables(cmds []iptables.IPTableEntry) error {
+func (*networkManager) addToIptables(cmds []iptables.IPTableEntry) error {
 	log.Printf("Adding additional iptable rules...")
 	for _, cmd := range cmds {
 		err := iptables.RunCmd(cmd.Version, cmd.Params)
@@ -547,7 +547,7 @@ func AddToIptables(cmds []iptables.IPTableEntry) error {
 	return nil
 }
 
-func AddRoutes(bridgeName string, routes []RouteInfo) error {
+func (nm *networkManager) addBridgeRoutes(bridgeName string, routes []RouteInfo) error {
 	log.Printf("Adding routes...")
 	for _, route := range routes {
 		route.DevName = bridgeName
@@ -562,7 +562,7 @@ func AddRoutes(bridgeName string, routes []RouteInfo) error {
 			LinkIndex: ifIndex,
 		}
 
-		if err := netlink.AddIpRoute(nlRoute); err != nil {
+		if err := nm.netlink.AddIpRoute(nlRoute); err != nil {
 			if !strings.Contains(strings.ToLower(err.Error()), "file exists") {
 				return fmt.Errorf("Failed to add %+v to host interface with error: %v", nlRoute, err)
 			}
@@ -613,14 +613,15 @@ func getNetworkInfoImpl(nwInfo *NetworkInfo, nw *network) {
 	}
 }
 
-func AddStaticRoute(ip string, interfaceName string) error {
+// TODO do we need this function ?
+func AddStaticRoute(netlink netlink.Netlink, ip string, interfaceName string) error {
 	log.Printf("[ovs] Adding %v static route", ip)
 	var routes []RouteInfo
 	_, ipNet, _ := net.ParseCIDR(ip)
 	gwIP := net.ParseIP("0.0.0.0")
 	route := RouteInfo{Dst: *ipNet, Gw: gwIP}
 	routes = append(routes, route)
-	if err := addRoutes(interfaceName, routes); err != nil {
+	if err := addRoutes(netlink, interfaceName, routes); err != nil {
 		if err != nil && !strings.Contains(strings.ToLower(err.Error()), "file exists") {
 			log.Printf("addroutes failed with error %v", err)
 			return err

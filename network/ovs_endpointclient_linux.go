@@ -26,6 +26,8 @@ type OVSEndpointClient struct {
 	allowInboundFromHostToNC bool
 	allowInboundFromNCToHost bool
 	enableSnatForDns         bool
+	netlink                  netlink.Netlink
+	epc                      epcommon.NetlinkRedirection
 }
 
 const (
@@ -53,6 +55,9 @@ func NewOVSEndpointClient(
 		allowInboundFromHostToNC: epInfo.AllowInboundFromHostToNC,
 		allowInboundFromNCToHost: epInfo.AllowInboundFromNCToHost,
 		enableSnatForDns:         epInfo.EnableSnatForDns,
+		// TODO now take netlink as input for this new func
+		netlink: netlink.NewNetlink(),
+		epc:     epcommon.NewNetlinkRedirection(netlink.NewNetlink()),
 	}
 
 	NewInfraVnetClient(client, epInfo.Id[:7])
@@ -62,7 +67,7 @@ func NewOVSEndpointClient(
 }
 
 func (client *OVSEndpointClient) AddEndpoints(epInfo *EndpointInfo) error {
-	if err := epcommon.CreateEndpoint(client.hostVethName, client.containerVethName); err != nil {
+	if err := client.epc.CreateEndpoint(client.hostVethName, client.containerVethName); err != nil {
 		return err
 	}
 
@@ -171,7 +176,7 @@ func (client *OVSEndpointClient) DeleteEndpointRules(ep *endpoint) {
 func (client *OVSEndpointClient) MoveEndpointsToContainerNS(epInfo *EndpointInfo, nsID uintptr) error {
 	// Move the container interface to container's network namespace.
 	log.Printf("[ovs] Setting link %v netns %v.", client.containerVethName, epInfo.NetNsPath)
-	if err := netlink.SetLinkNetNs(client.containerVethName, nsID); err != nil {
+	if err := client.netlink.SetLinkNetNs(client.containerVethName, nsID); err != nil {
 		return err
 	}
 
@@ -183,7 +188,7 @@ func (client *OVSEndpointClient) MoveEndpointsToContainerNS(epInfo *EndpointInfo
 }
 
 func (client *OVSEndpointClient) SetupContainerInterfaces(epInfo *EndpointInfo) error {
-	if err := epcommon.SetupContainerInterface(client.containerVethName, epInfo.IfName); err != nil {
+	if err := client.epc.SetupContainerInterface(client.containerVethName, epInfo.IfName); err != nil {
 		return err
 	}
 
@@ -197,7 +202,7 @@ func (client *OVSEndpointClient) SetupContainerInterfaces(epInfo *EndpointInfo) 
 }
 
 func (client *OVSEndpointClient) ConfigureContainerInterfacesAndRoutes(epInfo *EndpointInfo) error {
-	if err := epcommon.AssignIPToInterface(client.containerVethName, epInfo.IPAddresses); err != nil {
+	if err := client.epc.AssignIPToInterface(client.containerVethName, epInfo.IPAddresses); err != nil {
 		return err
 	}
 
@@ -209,12 +214,12 @@ func (client *OVSEndpointClient) ConfigureContainerInterfacesAndRoutes(epInfo *E
 		return err
 	}
 
-	return addRoutes(client.containerVethName, epInfo.Routes)
+	return addRoutes(client.netlink, client.containerVethName, epInfo.Routes)
 }
 
 func (client *OVSEndpointClient) DeleteEndpoints(ep *endpoint) error {
 	log.Printf("[ovs] Deleting veth pair %v %v.", ep.HostIfName, ep.IfName)
-	err := netlink.DeleteLink(ep.HostIfName)
+	err := client.netlink.DeleteLink(ep.HostIfName)
 	if err != nil {
 		log.Printf("[ovs] Failed to delete veth pair %v: %v.", ep.HostIfName, err)
 		return err

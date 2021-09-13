@@ -23,7 +23,6 @@ type NetlinkInterface interface {
 	SetLinkPromisc(ifName string, on bool) error
 	SetLinkHairpin(bridgeName string, on bool) error
 	AddOrRemoveStaticArp(mode int, name string, ipaddr net.IP, mac net.HardwareAddr, isProxy bool) error
-	GetIpAddressFamily(ip net.IP) int
 	AddIpAddress(ifName string, ipAddress net.IP, ipNet *net.IPNet) error
 	DeleteIpAddress(ifName string, ipAddress net.IP, ipNet *net.IPNet) error
 	GetIpRoute(filter *Route) ([]*Route, error)
@@ -33,6 +32,10 @@ type NetlinkInterface interface {
 }
 
 type Netlink struct{}
+
+func NewNetlink() Netlink {
+	return Netlink{}
+}
 
 // Init initializes netlink module.
 func init() {

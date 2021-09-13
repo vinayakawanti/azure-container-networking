@@ -25,6 +25,7 @@ type LinuxBridgeEndpointClient struct {
 	containerMac      net.HardwareAddr
 	hostIPAddresses   []*net.IPNet
 	mode              string
+	netlink           netlink.Netlink
 }
 
 func NewLinuxBridgeEndpointClient(
@@ -42,6 +43,7 @@ func NewLinuxBridgeEndpointClient(
 		hostPrimaryMac:    extIf.MacAddress,
 		hostIPAddresses:   []*net.IPNet{},
 		mode:              mode,
+		netlink:           netlink.NewNetlink(),
 	}
 
 	client.hostIPAddresses = append(client.hostIPAddresses, extIf.IPAddresses...)
@@ -67,7 +69,7 @@ func (client *LinuxBridgeEndpointClient) AddEndpointRules(epInfo *EndpointInfo) 
 	var err error
 
 	log.Printf("[net] Setting link %v master %v.", client.hostVethName, client.bridgeName)
-	if err := netlink.SetLinkMaster(client.hostVethName, client.bridgeName); err != nil {
+	if err := client.netlink.SetLinkMaster(client.hostVethName, client.bridgeName); err != nil {
 		return err
 	}
 
@@ -88,7 +90,7 @@ func (client *LinuxBridgeEndpointClient) AddEndpointRules(epInfo *EndpointInfo) 
 
 		if client.mode != opModeTunnel && ipAddr.IP.To4() != nil {
 			log.Printf("[net] Adding static arp for IP address %v and MAC %v in VM", ipAddr.String(), client.containerMac.String())
-			if err := netlink.AddOrRemoveStaticArp(netlink.ADD, client.bridgeName, ipAddr.IP, client.containerMac, false); err != nil {
+			if err := client.netlink.AddOrRemoveStaticArp(netlink.ADD, client.bridgeName, ipAddr.IP, client.containerMac, false); err != nil {
 				log.Printf("Failed setting arp in vm: %v", err)
 			}
 		}
@@ -97,7 +99,7 @@ func (client *LinuxBridgeEndpointClient) AddEndpointRules(epInfo *EndpointInfo) 
 	addRuleToRouteViaHost(epInfo)
 
 	log.Printf("[net] Setting hairpin for hostveth %v", client.hostVethName)
-	if err := netlink.SetLinkHairpin(client.hostVethName, true); err != nil {
+	if err := client.netlink.SetLinkHairpin(client.hostVethName, true); err != nil {
 		log.Printf("Setting up hairpin failed for interface %v error %v", client.hostVethName, err)
 		return err
 	}
@@ -126,7 +128,7 @@ func (client *LinuxBridgeEndpointClient) DeleteEndpointRules(ep *endpoint) {
 
 		if client.mode != opModeTunnel && ipAddr.IP.To4() != nil {
 			log.Printf("[net] Removing static arp for IP address %v and MAC %v from VM", ipAddr.String(), ep.MacAddress.String())
-			err := netlink.AddOrRemoveStaticArp(netlink.REMOVE, client.bridgeName, ipAddr.IP, ep.MacAddress, false)
+			err := client.netlink.AddOrRemoveStaticArp(netlink.REMOVE, client.bridgeName, ipAddr.IP, ep.MacAddress, false)
 			if err != nil {
 				log.Printf("Failed removing arp from vm: %v", err)
 			}
@@ -152,7 +154,7 @@ func (client *LinuxBridgeEndpointClient) getArpReplyAddress(epMacAddress net.Har
 func (client *LinuxBridgeEndpointClient) MoveEndpointsToContainerNS(epInfo *EndpointInfo, nsID uintptr) error {
 	// Move the container interface to container's network namespace.
 	log.Printf("[net] Setting link %v netns %v.", client.containerVethName, epInfo.NetNsPath)
-	if err := netlink.SetLinkNetNs(client.containerVethName, nsID); err != nil {
+	if err := client.netlink.SetLinkNetNs(client.containerVethName, nsID); err != nil {
 		return err
 	}
 
@@ -181,7 +183,7 @@ func (client *LinuxBridgeEndpointClient) ConfigureContainerInterfacesAndRoutes(e
 		return err
 	}
 
-	if err := addRoutes(client.containerVethName, epInfo.Routes); err != nil {
+	if err := addRoutes(client.netlink, client.containerVethName, epInfo.Routes); err != nil {
 		return err
 	}
 
@@ -198,7 +200,7 @@ func (client *LinuxBridgeEndpointClient) ConfigureContainerInterfacesAndRoutes(e
 
 func (client *LinuxBridgeEndpointClient) DeleteEndpoints(ep *endpoint) error {
 	log.Printf("[net] Deleting veth pair %v %v.", ep.HostIfName, ep.IfName)
-	err := netlink.DeleteLink(ep.HostIfName)
+	err := client.netlink.DeleteLink(ep.HostIfName)
 	if err != nil {
 		log.Printf("[net] Failed to delete veth pair %v: %v.", ep.HostIfName, err)
 		return err
@@ -274,7 +276,7 @@ func (client *LinuxBridgeEndpointClient) setupIPV6Routes(epInfo *EndpointInfo) e
 		routes = append(routes, defaultV6Route)
 
 		log.Printf("[net] Adding ipv6 routes in container %+v", routes)
-		if err := addRoutes(client.containerVethName, routes); err != nil {
+		if err := addRoutes(client.netlink, client.containerVethName, routes); err != nil {
 			return nil
 		}
 	}
@@ -287,7 +289,7 @@ func (client *LinuxBridgeEndpointClient) setIPV6NeighEntry(epInfo *EndpointInfo)
 		log.Printf("[net] Add neigh entry for host gw ip")
 		hardwareAddr, _ := net.ParseMAC(defaultHostGwMac)
 		hostGwIp := net.ParseIP(defaultV6HostGw)
-		if err := netlink.AddOrRemoveStaticArp(netlink.ADD, client.containerVethName,
+		if err := client.netlink.AddOrRemoveStaticArp(netlink.ADD, client.containerVethName,
 			hostGwIp, hardwareAddr, false); err != nil {
 			log.Printf("Failed setting neigh entry in container: %v", err)
 			return err

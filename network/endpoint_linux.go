@@ -238,7 +238,7 @@ func (nw *network) deleteEndpointImpl(ep *endpoint) error {
 func (ep *endpoint) getInfoImpl(epInfo *EndpointInfo) {
 }
 
-func addRoutes(interfaceName string, routes []RouteInfo) error {
+func addRoutes(nl netlink.Netlink, interfaceName string, routes []RouteInfo) error {
 	ifIndex := 0
 	interfaceIf, _ := net.InterfaceByName(interfaceName)
 
@@ -267,7 +267,7 @@ func addRoutes(interfaceName string, routes []RouteInfo) error {
 			Scope:     route.Scope,
 		}
 
-		if err := netlink.AddIpRoute(nlRoute); err != nil {
+		if err := nl.AddIpRoute(nlRoute); err != nil {
 			if !strings.Contains(strings.ToLower(err.Error()), "file exists") {
 				return err
 			} else {
@@ -279,7 +279,7 @@ func addRoutes(interfaceName string, routes []RouteInfo) error {
 	return nil
 }
 
-func deleteRoutes(interfaceName string, routes []RouteInfo) error {
+func deleteRoutes(nl netlink.Netlink, interfaceName string, routes []RouteInfo) error {
 	ifIndex := 0
 	interfaceIf, _ := net.InterfaceByName(interfaceName)
 
@@ -312,7 +312,7 @@ func deleteRoutes(interfaceName string, routes []RouteInfo) error {
 			Scope:     route.Scope,
 		}
 
-		if err := netlink.DeleteIpRoute(nlRoute); err != nil {
+		if err := nl.DeleteIpRoute(nlRoute); err != nil {
 			return err
 		}
 	}
@@ -380,7 +380,7 @@ func (nw *network) updateEndpointImpl(existingEpInfo *EndpointInfo, targetEpInfo
 	return ep, nil
 }
 
-func updateRoutes(existingEp *EndpointInfo, targetEp *EndpointInfo) error {
+func updateRoutes(nl netlink.Netlink, existingEp *EndpointInfo, targetEp *EndpointInfo) error {
 	log.Printf("Updating routes for the endpoint %+v.", existingEp)
 	log.Printf("Target endpoint is %+v", targetEp)
 
@@ -437,12 +437,12 @@ func updateRoutes(existingEp *EndpointInfo, targetEp *EndpointInfo) error {
 
 	}
 
-	err := deleteRoutes(existingEp.IfName, tobeDeletedRoutes)
+	err := deleteRoutes(nl, existingEp.IfName, tobeDeletedRoutes)
 	if err != nil {
 		return err
 	}
 
-	err = addRoutes(existingEp.IfName, tobeAddedRoutes)
+	err = addRoutes(nl, existingEp.IfName, tobeAddedRoutes)
 	if err != nil {
 		return err
 	}

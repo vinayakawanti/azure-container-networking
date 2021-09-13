@@ -24,7 +24,9 @@ func TestAllowInboundFromHostToNC(t *testing.T) {
 		containerSnatVethName: anyInterface,
 	}
 
-	if err := netlink.AddLink(&netlink.DummyLink{
+	nl := netlink.NewNetlink()
+
+	if err := nl.AddLink(&netlink.DummyLink{
 		LinkInfo: netlink.LinkInfo{
 			Type: netlink.LINK_TYPE_DUMMY,
 			Name: anyInterface,
@@ -33,7 +35,7 @@ func TestAllowInboundFromHostToNC(t *testing.T) {
 		t.Errorf("Error adding dummy interface %v", err)
 	}
 
-	if err := netlink.AddLink(&netlink.DummyLink{
+	if err := nl.AddLink(&netlink.DummyLink{
 		LinkInfo: netlink.LinkInfo{
 			Type: netlink.LINK_TYPE_DUMMY,
 			Name: SnatBridgeName,
@@ -54,8 +56,8 @@ func TestAllowInboundFromHostToNC(t *testing.T) {
 		t.Errorf("Error removing inbound rule: %v", err)
 	}
 
-	netlink.DeleteLink(anyInterface)
-	netlink.DeleteLink(SnatBridgeName)
+	nl.DeleteLink(anyInterface)
+	nl.DeleteLink(SnatBridgeName)
 }
 
 func TestAllowInboundFromNCToHost(t *testing.T) {
@@ -65,7 +67,9 @@ func TestAllowInboundFromNCToHost(t *testing.T) {
 		containerSnatVethName: anyInterface,
 	}
 
-	if err := netlink.AddLink(&netlink.DummyLink{
+	nl := netlink.NewNetlink()
+
+	if err := nl.AddLink(&netlink.DummyLink{
 		LinkInfo: netlink.LinkInfo{
 			Type: netlink.LINK_TYPE_DUMMY,
 			Name: anyInterface,
@@ -74,7 +78,7 @@ func TestAllowInboundFromNCToHost(t *testing.T) {
 		t.Errorf("Error adding dummy interface %v", err)
 	}
 
-	if err := netlink.AddLink(&netlink.DummyLink{
+	if err := nl.AddLink(&netlink.DummyLink{
 		LinkInfo: netlink.LinkInfo{
 			Type: netlink.LINK_TYPE_DUMMY,
 			Name: SnatBridgeName,
@@ -95,6 +99,6 @@ func TestAllowInboundFromNCToHost(t *testing.T) {
 		t.Errorf("Error removing inbound rule: %v", err)
 	}
 
-	netlink.DeleteLink(anyInterface)
-	netlink.DeleteLink(SnatBridgeName)
+	nl.DeleteLink(anyInterface)
+	nl.DeleteLink(SnatBridgeName)
 }

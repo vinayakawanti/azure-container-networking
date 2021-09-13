@@ -11,6 +11,7 @@ import (
 	cnms "github.com/Azure/azure-container-networking/cnms/cnmspackage"
 	"github.com/Azure/azure-container-networking/common"
 	"github.com/Azure/azure-container-networking/log"
+	"github.com/Azure/azure-container-networking/netlink"
 	"github.com/Azure/azure-container-networking/platform"
 	"github.com/Azure/azure-container-networking/store"
 )
@@ -56,6 +57,7 @@ type networkManager struct {
 	TimeStamp          time.Time
 	ExternalInterfaces map[string]*externalInterface
 	store              store.KeyValueStore
+	netlink            netlink.Netlink
 	sync.Mutex
 }
 
@@ -86,6 +88,7 @@ type NetworkManager interface {
 func NewNetworkManager() (NetworkManager, error) {
 	nm := &networkManager{
 		ExternalInterfaces: make(map[string]*externalInterface),
+		netlink:            netlink.NewNetlink(),
 	}
 
 	return nm, nil

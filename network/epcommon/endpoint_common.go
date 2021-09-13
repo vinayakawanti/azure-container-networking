@@ -1,3 +1,4 @@
+//go:build linux
 // +build linux
 
 package epcommon
@@ -35,22 +36,17 @@ const (
 	acceptRAV6File       = "/proc/sys/net/ipv6/conf/%s/accept_ra"
 )
 
-func getPrivateIPSpace() []string {
-	privateIPAddresses := []string{"10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "169.254.0.0/16"}
-	return privateIPAddresses
+type NetlinkRedirection struct {
+	netlink netlink.Netlink
 }
 
-func getFilterChains() []string {
-	chains := []string{"FORWARD", "INPUT", "OUTPUT"}
-	return chains
+func NewNetlinkRedirection(netlink netlink.Netlink) NetlinkRedirection {
+	return NetlinkRedirection{
+		netlink: netlink,
+	}
 }
 
-func getFilterchainTarget() []string {
-	actions := []string{"ACCEPT", "DROP"}
-	return actions
-}
-
-func CreateEndpoint(hostVethName string, containerVethName string) error {
+func (nr NetlinkRedirection) CreateEndpoint(hostVethName string, containerVethName string) error {
 	log.Printf("[net] Creating veth pair %v %v.", hostVethName, containerVethName)
 
 	link := netlink.VEthLink{
@@ -61,14 +57,14 @@ func CreateEndpoint(hostVethName string, containerVethName string) error {
 		PeerName: containerVethName,
 	}
 
-	err := netlink.AddLink(&link)
+	err := nr.netlink.AddLink(&link)
 	if err != nil {
 		log.Printf("[net] Failed to create veth pair, err:%v.", err)
 		return err
 	}
 
 	log.Printf("[net] Setting link %v state up.", hostVethName)
-	err = netlink.SetLinkState(hostVethName, true)
+	err = nr.netlink.SetLinkState(hostVethName, true)
 	if err != nil {
 		return err
 	}
@@ -80,16 +76,16 @@ func CreateEndpoint(hostVethName string, containerVethName string) error {
 	return nil
 }
 
-func SetupContainerInterface(containerVethName string, targetIfName string) error {
+func (nr NetlinkRedirection) SetupContainerInterface(containerVethName string, targetIfName string) error {
 	// Interface needs to be down before renaming.
 	log.Printf("[net] Setting link %v state down.", containerVethName)
-	if err := netlink.SetLinkState(containerVethName, false); err != nil {
+	if err := nr.netlink.SetLinkState(containerVethName, false); err != nil {
 		return err
 	}
 
 	// Rename the container interface.
 	log.Printf("[net] Setting link %v name %v.", containerVethName, targetIfName)
-	if err := netlink.SetLinkName(containerVethName, targetIfName); err != nil {
+	if err := nr.netlink.SetLinkName(containerVethName, targetIfName); err != nil {
 		return err
 	}
 
@@ -99,14 +95,14 @@ func SetupContainerInterface(containerVethName string, targetIfName string) erro
 
 	// Bring the interface back up.
 	log.Printf("[net] Setting link %v state up.", targetIfName)
-	return netlink.SetLinkState(targetIfName, true)
+	return nr.netlink.SetLinkState(targetIfName, true)
 }
 
-func AssignIPToInterface(interfaceName string, ipAddresses []net.IPNet) error {
+func (nr NetlinkRedirection) AssignIPToInterface(interfaceName string, ipAddresses []net.IPNet) error {
 	// Assign IP address to container network interface.
 	for _, ipAddr := range ipAddresses {
 		log.Printf("[net] Adding IP address %v to link %v.", ipAddr.String(), interfaceName)
-		err := netlink.AddIpAddress(interfaceName, ipAddr.IP, &ipAddr)
+		err := nr.netlink.AddIpAddress(interfaceName, ipAddr.IP, &ipAddr)
 		if err != nil {
 			return err
 		}
@@ -254,4 +250,19 @@ func DisableRAForInterface(ifName string) error {
 	}
 
 	return err
+}
+
+func getPrivateIPSpace() []string {
+	privateIPAddresses := []string{"10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "169.254.0.0/16"}
+	return privateIPAddresses
+}
+
+func getFilterChains() []string {
+	chains := []string{"FORWARD", "INPUT", "OUTPUT"}
+	return chains
+}
+
+func getFilterchainTarget() []string {
+	actions := []string{"ACCEPT", "DROP"}
+	return actions
 }
