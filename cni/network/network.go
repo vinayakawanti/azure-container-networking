@@ -23,7 +23,6 @@ import (
 	"github.com/Azure/azure-container-networking/iptables"
 	"github.com/Azure/azure-container-networking/log"
 	"github.com/Azure/azure-container-networking/network"
-	"github.com/Azure/azure-container-networking/network/policy"
 	"github.com/Azure/azure-container-networking/platform"
 	nnscontracts "github.com/Azure/azure-container-networking/proto/nodenetworkservice/3.302.0.744"
 	"github.com/Azure/azure-container-networking/store"
@@ -639,17 +638,17 @@ func (plugin *netPlugin) Add(args *cniSkel.CmdArgs) error {
 		return err
 	}
 
-	if nwCfg.IPV6Mode == network.IPV6Nat {
-		var ipv6Policy policy.Policy
+	// if nwCfg.IPV6Mode == network.IPV6Nat {
+	// 	var ipv6Policy policy.Policy
 
-		ipv6Policy, err = addIPV6EndpointPolicy(nwInfo)
-		if err != nil {
-			err = plugin.Errorf("Failed to set ipv6 endpoint policy: %v", err)
-			return err
-		}
+	// 	ipv6Policy, err = addIPV6EndpointPolicy(nwInfo)
+	// 	if err != nil {
+	// 		err = plugin.Errorf("Failed to set ipv6 endpoint policy: %v", err)
+	// 		return err
+	// 	}
 
-		policies = append(policies, ipv6Policy)
-	}
+	// 	policies = append(policies, ipv6Policy)
+	// }
 
 	epInfo = &network.EndpointInfo{
 		Id:                 endpointId,
