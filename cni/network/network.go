@@ -71,7 +71,7 @@ const (
 )
 
 const (
-	HCGoalStateFileLocation = "/c/k/hc-gs.json"
+	HCGoalStateFileLocation = "C:\\k\\hc-gs.json"
 )
 
 // NetPlugin represents the CNI network plugin.
@@ -795,6 +795,10 @@ func HCIPAMInvokerAdd(nwCfg *cni.NetworkConfig, _ *cniSkel.CmdArgs, subnetPrefix
 			_, r, _ := net.ParseCIDR("0.0.0.0/32")
 			result.Routes = append(result.Routes, &cniTypes.Route{Dst: *r, GW: net.ParseIP(data.NetworkProperties.IPV6.Gateway)})
 			log.Printf("result is %+v", result)
+
+			//setting subnetPrefix
+			sub := &result.IPs[0].Address
+			*subnetPrefix = *sub
 
 			return &result, &resultv6, err
 		}
