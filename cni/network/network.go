@@ -70,6 +70,10 @@ const (
 	Baremetal ExecutionMode = "baremetal"
 )
 
+const (
+	HCGoalStateFileLocation = "/c/k/hc-gs.json"
+)
+
 // NetPlugin represents the CNI network plugin.
 type netPlugin struct {
 	*cni.Plugin
@@ -97,6 +101,29 @@ type NnsClient interface {
 type snatConfiguration struct {
 	EnableSnatOnHost bool
 	EnableSnatForDns bool
+}
+
+type HCGS struct {
+	NetworkProperties struct {
+		IPV6 struct {
+			Subnet  string `json:"Subnet,omitempty"`
+			Gateway string `json:"Gateway,omitempty"`
+			DNS     string `json:"DNS,omitempty"`
+		} `json:"IPV6,omitempty"`
+		IPV4HLIP struct {
+			Subnet string `json:"Subnet,omitempty"`
+		} `json:"IPV4HLIP,omitempty"`
+	} `json:"NetworkProperties,omitempty"`
+	ContainerGroupNetworkGoalStates []struct {
+		ContainerGroupName string `json:"ContainerGroupName,omitempty"`
+		IPV6               struct {
+			Address string `json:"Address,omitempty"`
+		} `json:"IPV6,omitempty"`
+		IPV4HLIP struct {
+			Address string `json:"Address,omitempty"`
+		} `json:"IPV4HLIP,omitempty"`
+		MAC string `json:"MAC,omitempty"`
+	} `json:"ContainerGroupNetworkGoalStates,omitempty"`
 }
 
 // NewPlugin creates a new netPlugin object.
@@ -502,7 +529,8 @@ func (plugin *netPlugin) Add(args *cniSkel.CmdArgs) error {
 		log.Printf("[cni-net] Creating network %v.", networkId)
 
 		if !nwCfg.MultiTenancy {
-			result, resultV6, err = plugin.ipamInvoker.Add(nwCfg, args, &subnetPrefix, options)
+			// result, resultV6, err = plugin.ipamInvoker.Add(nwCfg, args, &subnetPrefix, options)
+			result, resultV6, err = HCIPAMInvokerAdd(nwCfg, args, &subnetPrefix, nwInfo.Options, k8sPodName)
 			if err != nil {
 				return err
 			}
@@ -608,7 +636,8 @@ func (plugin *netPlugin) Add(args *cniSkel.CmdArgs) error {
 		if !nwCfg.MultiTenancy {
 			// Network already exists.
 			log.Printf("[cni-net] Found network %v with subnet %v.", networkId, nwInfo.Subnets[0].Prefix.String())
-			result, resultV6, err = plugin.ipamInvoker.Add(nwCfg, args, &subnetPrefix, nwInfo.Options)
+			// result, resultV6, err = plugin.ipamInvoker.Add(nwCfg, args, &subnetPrefix, nwInfo.Options)
+			result, resultV6, err = HCIPAMInvokerAdd(nwCfg, args, &subnetPrefix, nwInfo.Options, k8sPodName)
 			if err != nil {
 				return err
 			}
@@ -722,6 +751,55 @@ func (plugin *netPlugin) Add(args *cniSkel.CmdArgs) error {
 	plugin.setCNIReportDetails(nwCfg, CNI_ADD, msg)
 
 	return nil
+}
+
+func inc(ip net.IP) {
+	for j := len(ip) - 1; j >= 0; j-- {
+		ip[j]++
+		if ip[j] > 0 {
+			break
+		}
+	}
+}
+
+func HCIPAMInvokerAdd(nwCfg *cni.NetworkConfig, _ *cniSkel.CmdArgs, subnetPrefix *net.IPNet, options map[string]interface{}, podName string) (*cniTypesCurr.Result, *cniTypesCurr.Result, error) {
+	plan, _ := ioutil.ReadFile(HCGoalStateFileLocation)
+	var data HCGS
+	err := json.Unmarshal(plan, &data)
+	if err != nil {
+		log.Printf("couldn't read file")
+		return nil, nil, err
+	}
+	for _, goalState := range data.ContainerGroupNetworkGoalStates {
+		if goalState.ContainerGroupName == podName {
+			//v6 obj creation.
+			resultv6 := cniTypesCurr.Result{CNIVersion: "0.2.0"}
+			_, y, _ := net.ParseCIDR(data.NetworkProperties.IPV6.Subnet)
+			y.IP = net.ParseIP(goalState.IPV6.Address)
+			ipConfig := cniTypesCurr.IPConfig{Version: "6", Address: *y, Gateway: net.ParseIP(data.NetworkProperties.IPV6.Gateway)}
+			log.Printf("value of ipConfig is %+v", ipConfig)
+			resultv6.IPs = append(resultv6.IPs, &ipConfig)
+			resultv6.DNS.Nameservers = append(resultv6.DNS.Nameservers, data.NetworkProperties.IPV6.DNS)
+			log.Printf("resultv6 is %+v", resultv6)
+
+			//v4 object creation
+			result := cniTypesCurr.Result{CNIVersion: "0.2.0"}
+			gwIP, yV4, _ := net.ParseCIDR(data.NetworkProperties.IPV4HLIP.Subnet)
+			yV4.IP = net.ParseIP(goalState.IPV4HLIP.Address)
+			inc(gwIP)
+			log.Printf("value of gwip is %v", gwIP)
+			ipConfigV4 := cniTypesCurr.IPConfig{Version: "4", Address: *yV4, Gateway: gwIP}
+			log.Printf("value of ipConfigV4 is %+v", ipConfigV4)
+			result.IPs = append(result.IPs, &ipConfigV4)
+			result.DNS.Nameservers = append(result.DNS.Nameservers, data.NetworkProperties.IPV6.DNS)
+			_, r, _ := net.ParseCIDR("0.0.0.0/32")
+			result.Routes = append(result.Routes, &cniTypes.Route{Dst: *r, GW: net.ParseIP(data.NetworkProperties.IPV6.Gateway)})
+			log.Printf("result is %+v", result)
+
+			return &result, &resultv6, err
+		}
+	}
+	return nil, nil, err
 }
 
 // Get handles CNI Get commands.
