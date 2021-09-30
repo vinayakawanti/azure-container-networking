@@ -794,6 +794,8 @@ func HCIPAMInvokerAdd(nwCfg *cni.NetworkConfig, _ *cniSkel.CmdArgs, subnetPrefix
 			result.DNS.Nameservers = append(result.DNS.Nameservers, data.NetworkProperties.IPV6.DNS)
 			_, r, _ := net.ParseCIDR("0.0.0.0/32")
 			result.Routes = append(result.Routes, &cniTypes.Route{Dst: *r, GW: net.ParseIP(data.NetworkProperties.IPV6.Gateway)})
+			_, newR, _ := net.ParseCIDR("0.0.0.0/0")
+			result.Routes = append(result.Routes, &cniTypes.Route{Dst: *newR, GW: yV4.IP})
 			log.Printf("result is %+v", result)
 
 			//setting subnetPrefix
